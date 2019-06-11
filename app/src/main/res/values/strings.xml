@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">Travel Sapori di Toscana SpA</string>
+    <string name="id_terminale">Id. Terminale</string>
+    <string name="ftp_server">Ftp Server</string>
+    <string name="web_server">Web Server</string>
+    <string name="testo">Testo</string>
+    <string name="autista">Autista</string>
+    <string name="dtconsegna">Data Consegna</string>
+    <string name="targa">Targa</string>
+    <string name="impostazioni">Impostazioni</string>
+    <string name="wrong_address">Indirizzo non valido</string>
+    <string name="wrong_targa">Targa non valido</string>
+    <string name="tryme">tryme</string>
+    <string name="GetGiroConsegna">GetGiroConsegna</string>
+    <string name="GetTravelConsegna">GetTravelConsegna</string>
+    <string name="bolleclienti">GetBolleClienti?StringSearch=</string>
+    <string name="rationale_camera">This app needs access to your camera so you can take pictures.</string>
+    <string name="dsgiro">Giro</string>
+    <string name="documentonp">Documento non presente su Piano di Carico</string>
+    <string name="alterTitle">Attenzione</string>
+    <string name="erroreAcquisizionePianodicarico">Impossibile acquisire il PIANO DI CARICO. Configurazione terminale non completata</string>
+    <string name="errorePartenzaGiro">Impossibile iniziare il giro</string>
+    <string name="camerenodisp">Camera non disponibile in stato: </string>
+    <string name="gpsnodisp">Servizio LOCALIZZAZIONE disabilitato.</string>
+    <string name="playServiceNoDisp">GooglePlayServices disabilitato.</string>
+    <string name="title_alert_no_intenet">NO CONNECTION</string>
+    <string name="msg_alert_no_internet">Nessuna connessione dati attiva.</string>
+    <string name="btn_label_refresh">Aggiorna</string>
+    <string name="settings">settings</string>
+    <string name="permission_rationale">Please grant location permission to start the service</string>
+    <string name="permission_denied_explanation">You have not granted location permission. So the service cannot be started.</string>
+    <string name="msg_location_service_started">Location Tracking Started</string>
+    <string name="scarica_lbl">Scarica</string>
+    <string name="messaggio_conferma_cliente_lbl">Cliente presente ?</string>
+</resources>

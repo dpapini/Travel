@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <item
+        android:id="@+id/action_save"
+        android:orderInCategory="200"
+        android:title="Salva"
+        android:icon="@drawable/ic_save"
+        app:showAsAction="ifRoom"/>
+    <item android:id="@+id/actio_ripristina"
+        android:icon="@drawable/ic_gear"
+        android:title="Ripristina"
+        android:enabled="true"
+        app:showAsAction="ifRoom"/>
+    <item android:id="@+id/action_info"
+        android:icon="@drawable/ic_info"
+        android:title="Informazinoi"
+        android:enabled="true"
+        app:showAsAction="ifRoom"/>
+</menu>
