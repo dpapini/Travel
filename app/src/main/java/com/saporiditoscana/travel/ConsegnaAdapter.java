@@ -35,7 +35,7 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
         TextView tipoDocumento;
         TextView numeroDocumento;
         TextView checkCliente;
-//        ImageView pagamentoContanti;
+        TextView pagamentoContanti;
 
         public ConsegnaViewHolder (View itemView){
             super(itemView);
@@ -49,7 +49,7 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
             nrReg = itemView.findViewById(R.id.nrreg);
             tipoDocumento = itemView.findViewById(R.id.tipoDocumento);
             numeroDocumento = itemView.findViewById(R.id.numeroDocumento);
-//            pagamentoContanti = itemView.findViewById(R.id.pagamentoContanti);
+            pagamentoContanti = itemView.findViewById(R.id.pagamentoContanti);
         }
 
         public void bind(final Consegna item  , final OnItemClickListener listener) {
@@ -68,17 +68,16 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
                 checkCliente.setVisibility(View.VISIBLE);
             }
 
-//            pagamentoContanti.setVisibility(View.GONE);
-//            if(item.getPagamentoContanti() == 1){
-//                pagamentoContanti.getBackground().setTint(Color.RED);
-//                pagamentoContanti.setVisibility(View.VISIBLE);
-//            }
+            pagamentoContanti.setVisibility(View.GONE);
+            if(item.getPagamentoContanti()){
+                pagamentoContanti.getBackground().setTint(Color.GREEN);
+                pagamentoContanti.setVisibility(View.VISIBLE);
+            }
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (item.getIdEsitoConsegna() == 0)
-                        listener.onItemClick(item);
+                    if (item.getIdEsitoConsegna() == 0)  listener.onItemClick(item);
                 }
             });
         }
@@ -99,8 +98,12 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
     }
 
     public void Update(List<Consegna> consegnas){
-        this.consegnas.clear();
-        this.consegnas.addAll(consegnas);
+//        this.consegnas.clear();
+//        this.notifyDataSetChanged();
+//        this.consegnas.addAll(consegnas);
+//        this.notifyDataSetChanged();
+
+        this.consegnas=consegnas;
         this.notifyDataSetChanged();
     }
 

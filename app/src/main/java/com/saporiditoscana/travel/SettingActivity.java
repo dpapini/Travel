@@ -114,7 +114,7 @@ public class SettingActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Logger.i(TAG, "Create");
+//        Logger.i(TAG, "Create");
         setContentView(R.layout.activity_setting);
         mHandler = new Handler(Looper.getMainLooper());
         lpb = findViewById(R.id.lpb);
@@ -130,7 +130,7 @@ public class SettingActivity extends AppCompatActivity {
             }
         });
 
-        Logger.i(TAG, "InitToolBar");
+//        Logger.i(TAG, "InitToolBar");
         InitToolBar("Impostazioni");
 
         //setto Terminale
@@ -148,7 +148,7 @@ public class SettingActivity extends AppCompatActivity {
 
         if (terminale.getId() > 0 ) //terminale inizializzato valorizzo tutti i campi
         {
-            Logger.i(TAG, "terminale inizializzato");
+//            Logger.i(TAG, "terminale inizializzato");
             mode = MODE.UPDATE;
 
             txTerminale = findViewById(R.id.txTerminale);
@@ -171,7 +171,7 @@ public class SettingActivity extends AppCompatActivity {
             txAutista = findViewById(R.id.txAutista);
             txAutista.setText(terminale.getConducente());
         }else{
-            Logger.i(TAG, "terminale nuovo");
+//            Logger.i(TAG, "terminale nuovo");
             mode = MODE.NEW;
 
             enableFields(false);
@@ -179,7 +179,7 @@ public class SettingActivity extends AppCompatActivity {
 
 
 //        getJsonAutomezzoAsync("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdAutomezzo");
-        Logger.i(TAG, "chiamo GetDdConducente ");
+//        Logger.i(TAG, "chiamo GetDdConducente ");
         getJsonConducenteAsync("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdConducente");
     }
 

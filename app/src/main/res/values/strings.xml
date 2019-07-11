@@ -32,4 +32,7 @@
     <string name="msg_location_service_started">Location Tracking Started</string>
     <string name="scarica_lbl">Scarica</string>
     <string name="messaggio_conferma_cliente_lbl">Cliente presente ?</string>
+    <string name="no">NO</string>
+    <string name="si">SI</string>
+    <string name="messaggio_giro_errato">Stai provando a carica un giro/consegna non assegnato all\'autista indicato.</string>
 </resources>

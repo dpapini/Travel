@@ -52,7 +52,6 @@
             android:layout_marginHorizontal="10dp"
             android:layout_marginVertical="65dp"
             android:clickable="true"
-            android:editable="true"
             android:focusable="auto"
             android:hint="@string/dtconsegna"
             android:inputType="none" />
@@ -63,10 +62,9 @@
             android:layout_height="42dp"
             android:layout_gravity="bottom|fill_horizontal"
             android:layout_marginHorizontal="10dp"
-            android:editable="false"
             android:ems="@integer/viewfinder_border_length"
             android:gravity="bottom"
-            android:paddingLeft="5dp"
+            android:paddingStart="5dp"
             app:layout_anchor="@id/dtConsegna"
             app:layout_anchorGravity="bottom|fill_horizontal" />
 

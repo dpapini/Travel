@@ -5,16 +5,18 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 import android.os.Environment;
 
 public class Logger{
     private static final String NEW_LINE =  System.getProperty("line.separator") ;
-    public static boolean mLogcatAppender = true;
+    private static boolean mLogcatAppender = true;
     final static File mLogFile;
 
     static {
-        mLogFile = new File( Environment.getExternalStorageDirectory(),  "TravelLog.log" );
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd", Locale.ITALIAN);
+        mLogFile = new File( Environment.getExternalStorageDirectory(),  "TravelLog.log_"+ sdf.format(new Date()) );
         if ( !mLogFile.exists() ) {
             try {
                 mLogFile.createNewFile();
@@ -88,6 +90,7 @@ public class Logger{
         appendLog("Device : " + android.os.Build.DEVICE);
         appendLog("Codename : " + android.os.Build.VERSION.CODENAME);
         appendLog("Release : " + android.os.Build.VERSION.RELEASE);
+        appendLog("Version : " + BuildConfig.VERSION_NAME);
     }
 
 }

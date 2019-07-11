@@ -44,7 +44,6 @@ public class Giro {
         }catch (Exception e)
         {
 //            Log.e(TAG, e.getMessage());
-
         }
     }
 
@@ -93,6 +92,14 @@ public class Giro {
         return sdf.format(d);
     }
 
+    public String getDtConsegnayyyyMMdd()
+    {
+        Date d = new Date(Long.parseLong(DtConsegna.replaceAll("[^\\d.]", "")));
+        String myFormat = "yyyyMMdd"; //In which you need put here
+        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.ITALIAN);
+
+        return sdf.format(d);
+    }
     public void setDtConsegna(String dtConsegna) {
         this.DtConsegna = dtConsegna;
     }

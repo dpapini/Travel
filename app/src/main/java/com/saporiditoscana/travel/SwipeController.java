@@ -23,10 +23,14 @@ enum ButtonsState {
 public class SwipeController extends Callback {
     private boolean swipeBack = false;
     private ButtonsState buttonShowedState = ButtonsState.GONE;
-    private static final float buttonWidth = 300;
+    private static final float buttonWidth = 100;
     private RecyclerView.ViewHolder currentItemViewHolder = null;
     private RectF buttonInstance =  null;
     private  SwipeControllerActions buttonsActions = null;
+
+    public  SwipeController(){
+    }
+
 
     public  SwipeController(SwipeControllerActions buttonActions){
         this.buttonsActions = buttonActions;
@@ -38,6 +42,8 @@ public class SwipeController extends Callback {
         if ("swipe_enable".equalsIgnoreCase((String)viewHolder.itemView.getTag()))
             return makeMovementFlags(0,LEFT|RIGHT);
         else return 0; //swipe disbilitato
+
+//        return makeMovementFlags(0, LEFT | RIGHT);
     }
 
     @Override
@@ -100,7 +106,7 @@ public class SwipeController extends Callback {
     }
 
     private void drawText(String text, Canvas c, RectF button, Paint p) {
-        float textSize = 60;
+        float textSize = 30;
         p.setColor(Color.WHITE);
         p.setAntiAlias(true);
         p.setTextSize(textSize);

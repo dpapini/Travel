@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.SyncStateContract;
 import android.util.Log;
 
+import com.saporiditoscana.travel.Logger;
 import com.saporiditoscana.travel.MainActivity;
 import com.saporiditoscana.travel.Orm.Step;
 import com.saporiditoscana.travel.Orm.Terminale;
@@ -16,7 +17,7 @@ import com.saporiditoscana.travel.Orm.Terminale;
 public class DBhelper extends SQLiteOpenHelper {
     private static final String TAG = "DBhelper";
     public static final String DBNAME="TRAVELDB";
-    public static final Integer DBVERSION=1;
+    public static final Integer DBVERSION=3;
 
     public static final String T_TERMINALE = "t_terminale";
     public static final String T_CONSEGNA = "t_consegna";
@@ -95,6 +96,10 @@ public class DBhelper extends SQLiteOpenHelper {
             sql.append("  \"ts_validita\" text,");
             sql.append("  \"fl_inviato\" char(01),");
             sql.append("  \"testo\" nvarchar(250), ");
+            sql.append("  \"pagamento_contanti\" integer NOT NULL DEFAULT 0, ");
+            sql.append("  \"mail_vettore\" nvarchar(250) NOT NULL DEFAULT '', ");
+            sql.append("  \"fl_uploaded\" char(01) NOT NULL DEFAULT 'N' ,");
+            sql.append("  \"commento\" nvarchar(250) NOT NULL DEFAULT '', ");
             sql.append(" PRIMARY KEY(\"anno_reg\", \"nr_reg\") ");
             sql.append(");");
             db.execSQL(sql.toString());
@@ -136,7 +141,7 @@ public class DBhelper extends SQLiteOpenHelper {
             if (!transectionStarted) db.setTransactionSuccessful();
         }catch (SQLiteException sqle)
         {
-//            Log.e(TAG, sqle.getMessage());
+            Logger.e(TAG, "one error occurred: " + sqle.getLocalizedMessage());
         }
         finally {
             if (!transectionStarted) db.endTransaction();
@@ -151,8 +156,13 @@ public class DBhelper extends SQLiteOpenHelper {
         if (tableExists(db,T_CONSEGNA)) {
             if (!fieldExists(db,T_CONSEGNA, "pagamento_contanti"))
                 db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD pagamento_contanti INTEGER NOT NULL DEFAULT 0 ");
-            if (!fieldExists(db,T_CONSEGNA, "cod_vettore"))
-                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD cod_vettore nvarchar(250) NOT NULL DEFAULT '' ");
+            if (!fieldExists(db,T_CONSEGNA, "mail_vettore"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD mail_vettore nvarchar(250) NOT NULL DEFAULT '' ");
+            if (!fieldExists(db,T_CONSEGNA, "fl_uploaded"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD fl_uploaded char(01) NOT NULL DEFAULT 'N' ");
+            if (!fieldExists(db,T_CONSEGNA, "commento"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD commento nvarchar(250) NOT NULL DEFAULT '' ");
+
         }
 
     }
@@ -181,22 +191,23 @@ public class DBhelper extends SQLiteOpenHelper {
     }
 
     public boolean fieldExists(SQLiteDatabase db,  String nomeTabella, String nomeCampo) {
-        String sqlQuery = "";
+
         Cursor cursor = null;
         boolean exists = false;
-        String sSql = "";
         try {
-            cursor = db.rawQuery(" SELECT sql FROM sqlite_master   WHERE type = 'table'     AND name = '" + nomeTabella + "' ", null);
-            cursor.moveToFirst();
-            if (!cursor.isAfterLast() && cursor.getString(cursor.getColumnIndex("sql")).replaceAll("\t", " ").contains(" " + nomeCampo + " ")) {
-                exists = true;
+//            cursor = db.rawQuery(" SELECT sql FROM sqlite_master   WHERE type = 'table'     AND name = '" + nomeTabella + "' ", null);
+            cursor = db.rawQuery("PRAGMA table_info("+nomeTabella+")",null);
+            if (cursor!= null) {
+                try{
+                    while (cursor.moveToNext() && !exists) {
+                        exists =  cursor.getString(cursor.getColumnIndex("name")).equals(nomeCampo);
+                    }
+                }
+                finally {
+                    cursor.close();
+                }
             }
-            if (cursor != null) {
-                cursor.close();
-            }
-            if (cursor != null) {
-                cursor.close();
-            }
+
         } catch (SQLiteException sqle){
             if (cursor != null) cursor.close();
 

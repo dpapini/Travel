@@ -2,19 +2,20 @@ package com.saporiditoscana.travel.Orm;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.DbHelper.DbQuery;
+import com.saporiditoscana.travel.Logger;
 import com.saporiditoscana.travel.Result;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -63,9 +64,13 @@ public class Consegna  implements Serializable {
     @SerializedName("NumeroDocumento")
     private Integer NumeroDocumento;
     @SerializedName("PagamentoContanti")
-    private Integer PagamentoContanti;
-    @SerializedName("CdVettore")
-    private String CdVettore;
+    private Boolean PagamentoContanti;
+    @SerializedName("MailVettore")
+    private String MailVettore;
+    @SerializedName("FlUploaded")
+    private String FlUploaded;
+    @SerializedName("Commento")
+    private String Commento;
 
 
     public Consegna(){}
@@ -98,8 +103,10 @@ public class Consegna  implements Serializable {
                     this.Sequenza = c.getString(c.getColumnIndex("sequenza"));
                     this.NumeroDocumento = c.getInt(c.getColumnIndex("numero_documento"));
                     this.TipoDocumento = c.getString(c.getColumnIndex("tipo_documento"));
-                    this.PagamentoContanti = c.getInt(c.getColumnIndex("pagamento_contanti"));
-                    this.CdVettore = c.getString(c.getColumnIndex("cod_vettore"));
+                    this.PagamentoContanti =    c.getInt(c.getColumnIndex("pagamento_contanti"))==1; //TRUE
+                    this.MailVettore = c.getString(c.getColumnIndex("mail_vettore"));
+                    this.FlUploaded = c.getString(c.getColumnIndex("fl_uploaded"));
+                    this.Commento = c.getString(c.getColumnIndex("commento"));
                 }
             }
         }catch (Exception e)
@@ -223,9 +230,7 @@ public class Consegna  implements Serializable {
         this.MailAge = mailAge;
     }
 
-    public String getMailCapoArea() {
-        return MailCapoArea + ";";
-    }
+    public String getMailCapoArea() {return MailCapoArea + ";";}
 
     public void setMailCapoArea(String mailCapoArea) {
         this.MailCapoArea = mailCapoArea;
@@ -247,21 +252,15 @@ public class Consegna  implements Serializable {
         Sequenza = sequenza;
     }
 
-    public String getTesto() {
-        return testo;
-    }
+    public String getTesto() {return testo;}
 
     public void setTesto(String testo) {
         this.testo = testo;
     }
 
-    public String getFlInviato() {
-        return flInviato;
-    }
+    public String getFlInviato() {return flInviato; }
 
-    public void setFlInviato(String flInviato) {
-        this.flInviato = flInviato;
-    }
+    public void setFlInviato(String flInviato) {this.flInviato = flInviato;}
 
     public String getTsValidita() {
         return tsValidita;
@@ -287,13 +286,21 @@ public class Consegna  implements Serializable {
         TipoDocumento = tipoDocumento;
     }
 
-    public Integer getPagamentoContanti() {return PagamentoContanti;}
+    public Boolean getPagamentoContanti() {return PagamentoContanti;}
 
-    public void setPagamentoContanti(Integer pagamentoContanti) {PagamentoContanti = pagamentoContanti;}
+    public void setPagamentoContanti(Boolean pagamentoContanti) {PagamentoContanti = pagamentoContanti;}
 
-    public String getCdVettore() {return CdVettore;}
+    public String getMailVettore() {return MailVettore+ ";";}
 
-    public void setCdVettore(String cdVettore) {CdVettore = cdVettore;}
+    public void setMailVettore(String mailVettore) {this.MailVettore = mailVettore;}
+
+    public String getFlUploaded() {return FlUploaded;}
+
+    public void setFlUploaded(String flUploaded) {this.FlUploaded = flUploaded;}
+
+    public String getCommento() {return Commento;}
+
+    public void setCommento(String commento) {this.Commento = commento;}
 
     public static DbQuery Insert(int AnnoReg, int NrReg){
         DbQuery dbQuery = new DbQuery();
@@ -301,23 +308,24 @@ public class Consegna  implements Serializable {
             StringBuilder sb;
 
             sb = new StringBuilder();
-            sb.append("INSERT INTO t_consegna (anno_reg, nr_reg, numero_documento, tipo_documento, cod_cli, rag_soc, indirizzo, localita, cod_age, cod_capo_area, mail_agente, mail_capo_area, pagamento_contanti, cod_vettore)");
-            sb.append("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
+            sb.append("INSERT INTO t_consegna (anno_reg, nr_reg, numero_documento, tipo_documento, cod_cli, rag_soc, indirizzo, localita, cod_age, cod_capo_area, mail_agente, mail_capo_area, pagamento_contanti, mail_vettore, commento)");
+            sb.append("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
             dbQuery.setSql(sb.toString());
             String[] parameters = new String[]{String.valueOf(AnnoReg)
                     , String.valueOf(NrReg)
                     , String.valueOf(-1) //numerodocumento
-                    , String.valueOf("") //tipodocumento
+                    , ("") //tipodocumento
                     , String.valueOf(-1) //codcli
-                    , String.valueOf("") //ragsoc
-                    , String.valueOf("") //Indirizzo
-                    , String.valueOf("") //Localita
-                    , String.valueOf("") //cod_age
-                    , String.valueOf("") //cod_capo_area
-                    , String.valueOf("") //mail_agente
-                    , String.valueOf("") //mail_capo_area
+                    , ("") //ragsoc
+                    , ("") //Indirizzo
+                    , ("") //Localita
+                    , ("") //cod_age
+                    , ("") //cod_capo_area
+                    , ("") //mail_agente
+                    , ("") //mail_capo_area
                     , String.valueOf(0)  //pagamento_contanti
-                    , String.valueOf("") //codvettore
+                    , ("") //mailvettore
+                    , ("") //commento
             };
             dbQuery.setParameters(parameters);
 
@@ -368,6 +376,7 @@ public class Consegna  implements Serializable {
         try{
             StringBuilder sb;
 
+            String tsCurrent = Gps.GetCurrentTimeStamp();
             sb = new StringBuilder();
             sb.append("UPDATE t_consegna SET cod_cli = ? ");
             sb.append("     , rag_soc = ? ");
@@ -380,11 +389,14 @@ public class Consegna  implements Serializable {
             sb.append("     , sequenza = ? ");
             sb.append("     , numero_documento = ? ");
             sb.append("     , tipo_documento = ? ");
-
             sb.append("     , id_esito_consegna = ? ");
             sb.append("     , ts_validita = ? ");
             sb.append("     , fl_inviato = ? ");
             sb.append("     , testo = ? ");
+            sb.append("     , pagamento_contanti = ? ");
+            sb.append("     , mail_vettore = ? ");
+            sb.append("     , fl_uploaded = ? ");
+            sb.append("     , commento = ? ");
 
             sb.append(" WHERE anno_reg = ? ");
             sb.append("   AND nr_reg = ? ");
@@ -402,9 +414,13 @@ public class Consegna  implements Serializable {
                     , String.valueOf(consegna.getNumeroDocumento())
                     , String.valueOf(consegna.getTipoDocumento())
                     , String.valueOf(consegna.getIdEsitoConsegna())
-                    , String.valueOf(Gps.GetCurrentTimeStamp())
+                    , String.valueOf(tsCurrent)
                     , String.valueOf(consegna.getFlInviato())
                     , String.valueOf(consegna.getTesto())
+                    , String.valueOf(consegna.getPagamentoContanti()?1:0)
+                    , String.valueOf(consegna.getMailVettore())
+                    , String.valueOf(consegna.getFlUploaded())
+                    , String.valueOf(consegna.getCommento())
                     , String.valueOf(consegna.getAnnoReg())
                     , String.valueOf(consegna.getNrReg())
             };
@@ -414,7 +430,10 @@ public class Consegna  implements Serializable {
             int rows = dbManager.ExecuteSql(sb.toString(),parameters);
 
             if (rows==0) result = false;
-            else result = true;
+            else {
+                result = true;
+                consegna.setTsValidita(tsCurrent);
+            }
         }
         catch (Exception e)
         {
@@ -429,17 +448,12 @@ public class Consegna  implements Serializable {
             StringBuilder sb;
 
             sb = new StringBuilder();
-            sb.append("UPDATE t_consegna SET id_esito_consegna = ? ");
-            sb.append("     , ts_validita = ? ");
-            sb.append("     , fl_inviato = ? ");
+            sb.append("UPDATE t_consegna SET fl_uploaded = 'S' ");
             sb.append(" WHERE anno_reg = ? ");
             sb.append("   AND nr_reg = ? ");
 
             String[] parameters = new String[]{
-                    String.valueOf(consegna.getIdEsitoConsegna())
-                    , String.valueOf(consegna.getTsValidita())
-                    , String.valueOf(consegna.getFlInviato())
-                    , String.valueOf(consegna.getAnnoReg())
+                      String.valueOf(consegna.getAnnoReg())
                     , String.valueOf(consegna.getNrReg())
             };
 
@@ -524,15 +538,17 @@ public class Consegna  implements Serializable {
                     consegna.setSequenza(c.getString(c.getColumnIndex("sequenza")));
                     consegna.setTipoDocumento(c.getString(c.getColumnIndex("tipo_documento")));
                     consegna.setNumeroDocumento(c.getInt(c.getColumnIndex("numero_documento")));
-                    consegna.setPagamentoContanti(c.getInt(c.getColumnIndex("pagamento_contanti")));
-                    consegna.setCdVettore(c.getString(c.getColumnIndex("cod_vettore")));
+                    consegna.setPagamentoContanti(c.getInt(c.getColumnIndex("pagamento_contanti"))==1);
+                    consegna.setMailVettore(c.getString(c.getColumnIndex("mail_vettore")));
+                    consegna.setFlUploaded(c.getString(c.getColumnIndex("fl_uploaded")));
+                    consegna.setCommento(c.getString(c.getColumnIndex("commento")));
 
                     consegnas.add(consegna);
                 }
             }
         }catch (Exception e)
         {
-//            Log.e(TAG, e.getMessage());
+            Logger.e(TAG, "one error occurred:" + e.getLocalizedMessage());
 
         }
         return consegnas;
@@ -556,6 +572,33 @@ public class Consegna  implements Serializable {
             if (c!= null){
                 while (c.moveToNext()){
                     result.append(c.getString(c.getColumnIndex("mail_capo_area"))+';');
+                }
+            }
+        }catch (Exception e){
+//            Log.e(TAG, e.getMessage());
+            c= null;
+        }
+        return result.toString();
+    }
+
+    /**
+     *
+     * Restituisce una stringa contenente tutti gli indirizzi mail dei capi area conivolti
+     */
+    public static String GetMailVettore(Context context)
+    {
+        StringBuilder result = new StringBuilder();
+        Cursor c;
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("SELECT DISTINCT  mail_vettore FROM t_consegna ");
+
+            DbManager dbManager = new DbManager(context);
+            c = dbManager.GetCursor(sb.toString(), null);
+
+            if (c!= null){
+                while (c.moveToNext()){
+                    result.append(c.getString(c.getColumnIndex("mail_vettore"))+';');
                 }
             }
         }catch (Exception e){
@@ -608,6 +651,8 @@ public class Consegna  implements Serializable {
             json.addProperty("IdEsitoConsegna", consegna.getIdEsitoConsegna());
             json.addProperty("Testo", consegna.getTesto());
             json.addProperty("TsValidita", consegna.getTsValidita());
+            json.addProperty("IdDevice", terminale.getId());
+            json.addProperty("Commento", consegna.getCommento());
 
             HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
             urlBuilder.addQueryParameter("EditJson", json.toString());
@@ -635,15 +680,45 @@ public class Consegna  implements Serializable {
                         final Result result = gson.fromJson(jsonData, Result.class);
 
                         if (result.Error != null) {
+                            Logger.e(TAG, result.getError().toString());
                             throw new Exception("Aggiornamento fallito");
                         }
+
+                        BoolUpdateStato(consegna, context);
+
                     } catch (Exception e) {
-//                        Log.e(TAG, e.getMessage());
+                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
                     }
                 }
             });
         } catch (Exception e) {
 //            Log.e(TAG, e.getMessage());
         }
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", Consegna.class.getSimpleName() + "[", "]")
+                .add("AnnoReg=" + AnnoReg)
+                .add("NrReg=" + NrReg)
+                .add("CdCli=" + CdCli)
+                .add("RagioneSociale='" + RagioneSociale + "'")
+                .add("Indirizzo='" + Indirizzo + "'")
+                .add("Localita='" + Localita + "'")
+                .add("CdAge='" + CdAge + "'")
+                .add("CdCapoArea='" + CdCapoArea + "'")
+                .add("MailAge='" + MailAge + "'")
+                .add("MailCapoArea='" + MailCapoArea + "'")
+                .add("Sequenza='" + Sequenza + "'")
+                .add("idEsitoConsegna=" + idEsitoConsegna)
+                .add("tsValidita='" + tsValidita + "'")
+                .add("flInviato='" + flInviato + "'")
+                .add("testo='" + testo + "'")
+                .add("TipoDocumento='" + TipoDocumento + "'")
+                .add("NumeroDocumento=" + NumeroDocumento)
+                .add("PagamentoContanti=" + PagamentoContanti)
+                .add("MailVettore='" + MailVettore + "'")
+                .add("FlUploaded='" + FlUploaded + "'")
+                .toString();
     }
 }

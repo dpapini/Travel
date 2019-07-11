@@ -317,7 +317,7 @@ public class CameraCaptured extends AppCompatActivity {
 //            inSampleSize++;
 //        }
 
-        Logger.d(TAG, String.valueOf(inSampleSize));
+//        Logger.d(TAG, String.valueOf(inSampleSize));
         return inSampleSize;
     }
 

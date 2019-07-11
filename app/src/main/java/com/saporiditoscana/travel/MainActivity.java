@@ -105,6 +105,7 @@ public class MainActivity  extends AppCompatActivity {
     public static EditText dtConsegna ;
     public static TextView txGiro;
     public Dialog clientDialog;
+    public Giro giro;
 
     private Handler mHandler;
     private ContentLoadingProgressBar lpb;
@@ -167,15 +168,17 @@ public class MainActivity  extends AppCompatActivity {
         GetStatApp();
         //devo leggere la tabella step per sapere in che stato è l'applicazione
         UpdateStastoView();
+
+        initializeViewGiro();
         switch (this.stato) {
             case CONFIGURED:
                 dtConsegna.setEnabled(true);
                 break;
             case UPLOAD_TRAVEL:
-                initializeViewGiro();
+//                initializeViewGiro();
                 break;
             case UPLOAD_DETAIL_TRAVEL:
-                initializeViewGiro();
+//                initializeViewGiro();
                 if (Consegna.Check(MainActivity.this)) {
                     Step.Update(STATO.TRAVEL_COMPLETED.id, MainActivity.this);
                     this.stato = STATO.TRAVEL_COMPLETED;
@@ -183,10 +186,10 @@ public class MainActivity  extends AppCompatActivity {
                 break;
             case TRAVEL_COMPLETED:
                 //ho caricato tutte le bolle
-                initializeViewGiro();
+//                initializeViewGiro();
                 break;
             case UPLOAD_START_TRAVEL:
-                initializeViewGiro();
+//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 chekTracking();
                 if (consegnaAdapter != null && consegnaAdapter.isCompleted()) {
@@ -195,17 +198,17 @@ public class MainActivity  extends AppCompatActivity {
                 }
                 break;
             case UPLOAD_END_TRAVEL:
-                initializeViewGiro();
+//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 chekTracking();
                 break;
             case UPLOAD_DOWNLOAD_TRAVEL:
-                initializeViewGiro();
+//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 chekTracking();
                 break;
             case GET_PICTURE_CAMERA:
-                initializeViewGiro();
+//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 Step.Update(STATO.UPLOAD_START_TRAVEL.id,MainActivity.this);
             default:
@@ -402,27 +405,6 @@ public class MainActivity  extends AppCompatActivity {
         if (consegnas.size() > 0) {
             rv = findViewById(R.id.rv);
 
-//            final SwipeController swipeController = new SwipeController(new SwipeControllerActions() {
-//                @Override
-//                public void onLeftClicked(int position) {
-//                    //TODO
-//                }
-//
-//                @Override
-//                public void onRightClicked(int position) {
-//                    //TODO
-//                }
-//            });
-//            ItemTouchHelper itemTouchhelper = new ItemTouchHelper(swipeController);
-//            itemTouchhelper.attachToRecyclerView(rv);
-//
-//            rv.addItemDecoration(new RecyclerView.ItemDecoration() {
-//                @Override
-//                public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-//                    swipeController.onDraw(c);
-//                }
-//            });
-
             if (rv != null) {
                 rv.setNestedScrollingEnabled(true);
                 consegnaAdapter = new ConsegnaAdapter(consegnas, new ConsegnaAdapter.OnItemClickListener() {
@@ -431,7 +413,6 @@ public class MainActivity  extends AppCompatActivity {
                         if (GetStatApp().id != STATO.UPLOAD_START_TRAVEL.id) return;
 
                         clientDialog = new Dialog(MainActivity.this);
-
                         clientDialog.setContentView(R.layout.dialog_cliente);
                         clientDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
@@ -447,28 +428,39 @@ public class MainActivity  extends AppCompatActivity {
                         documento.setText(item.getTipoDocumento() + " " + String.valueOf(item.getNumeroDocumento()));
 
                         final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
+                        final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+                        final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+                        final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+
                         btnOk.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                btnOk.setEnabled(false);
+                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
 
-//                                //Chiedo se è presente o meno il cliente
-//                                AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
-//                                alertDialog.setTitle(R.string.alterTitle);
-//                                alertDialog.setMessage(R.string.messaggio_conferma_cliente_lbl);
-//                                alertDialog.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-//                                    @Override
-//                                    public void onClick(DialogInterface dialog, int which) {
-//                                        esitoConsegna = 5;
-//                                    }
-//                                });
-//
-//                                alertDialog.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-//                                    @Override
-//                                    public void onClick(DialogInterface dialog, int which) {
-//                                        esitoConsegna = 1;
-//                                    }
-//                                });
+                            //Chiedo se è presente o meno il cliente
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                            builder.setTitle(R.string.alterTitle);
+                            builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                            builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                esitoConsegna = 5;
+                                Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                Gson gson = new Gson();
+
+                                Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                intent.putExtra("consegna", gson.toJson(item));
+                                intent.putExtra("esito", esitoConsegna);
+                                intent.putExtra("commento", "");
+                                startActivityForResult(intent,CAMERA_REQUEST);
+                                }
+                            });
+
+                            builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                esitoConsegna = 1;
+
                                 Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
                                     @Override
                                     public void callback(final String message, Integer result) {
@@ -480,8 +472,10 @@ public class MainActivity  extends AppCompatActivity {
                                                 lpb.hide();
                                                 if (_result == 0) {
                                                     item.setFlInviato("S");
-                                                    item.setIdEsitoConsegna(1);
+                                                    item.setIdEsitoConsegna(esitoConsegna);
+                                                    item.setCommento("");
                                                     Consegna.Update(item, getBaseContext());
+                                                    Consegna.InsertConsegna(item, getBaseContext());//scrivo sul db del server
 
                                                     clientDialog.onBackPressed();
                                                     consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
@@ -490,51 +484,123 @@ public class MainActivity  extends AppCompatActivity {
                                                         UpdateStastoView();
                                                     }
                                                 }
-                                                btnOk.setEnabled(true);
+                                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
                                                 Toast.makeText(getApplicationContext(), _message, Toast.LENGTH_LONG).show();
                                             }
                                         });
                                     }
                                 });
-                                mail.setAddressTo(item.getMailAge());
+                                mail.setAddressTo(item.getMailAge() + item.getMailVettore());
                                 mail.setAddressCc("logistica@saporiditoscana.com");
-                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
+//                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
+                                mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
                                 mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), 1));
                                 mail.SendMail();
+                                }
+                            });
+                            AlertDialog alert = builder.create();
+                            alert.show();
                             }
                         });
-                        Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+
+                        //merce mancante
                         btnMerceMancante.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                Gson gson = new Gson();
+                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
 
-                                Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                intent.putExtra("consegna", gson.toJson(item));
-                                intent.putExtra("esito", 2);
-                                intent.putExtra("commento", "Merce mancante");
-                                startActivityForResult(intent,CAMERA_REQUEST);
+                                //Chiedo se è presente o meno il cliente
+                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                builder.setTitle(R.string.alterTitle);
+                                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                    esitoConsegna = 6;
+
+                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                    Gson gson = new Gson();
+
+                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                    intent.putExtra("consegna", gson.toJson(item));
+                                    intent.putExtra("esito", esitoConsegna);
+                                    intent.putExtra("commento", "");
+                                    startActivityForResult(intent,CAMERA_REQUEST);
+                                    }
+                                });
+
+                                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                    esitoConsegna = 2;
+
+                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                    Gson gson = new Gson();
+
+                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                    intent.putExtra("consegna", gson.toJson(item));
+                                    intent.putExtra("esito", esitoConsegna);
+                                    intent.putExtra("commento", "");
+                                    startActivityForResult(intent,CAMERA_REQUEST);
+                                    }
+                                });
+                                AlertDialog alert = builder.create();
+                                alert.show();
                             }
                         });
-                        Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+
+                        //merce danneggiata
                         btnMerceDanneggiata.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                Gson gson = new Gson();
+                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
 
-                                Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                intent.putExtra("consegna", gson.toJson(item));
-                                intent.putExtra("esito", 3);
-                                intent.putExtra("commento", "Merce Danneggiata");
-                                startActivityForResult(intent,CAMERA_REQUEST);
+                                //Chiedo se è presente o meno il cliente
+                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                builder.setTitle(R.string.alterTitle);
+                                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                    esitoConsegna = 7;
+
+                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                    Gson gson = new Gson();
+
+                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                    intent.putExtra("consegna", gson.toJson(item));
+                                    intent.putExtra("esito", esitoConsegna);
+                                    intent.putExtra("commento", "");
+                                    startActivityForResult(intent,CAMERA_REQUEST);
+                                    }
+                                });
+
+                                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                    esitoConsegna = 3;
+
+                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                    Gson gson = new Gson();
+
+                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                    intent.putExtra("consegna", gson.toJson(item));
+                                    intent.putExtra("esito", esitoConsegna);
+                                    intent.putExtra("commento", "");
+                                    startActivityForResult(intent,CAMERA_REQUEST);
+                                    }
+                                });
+
+                                AlertDialog alert = builder.create();
+                                alert.show();
                             }
                         });
-                        Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+
+                        //altro
                         btnAltro.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
+                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
 
                                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                                 builder.setTitle("Comment");
@@ -550,17 +616,17 @@ public class MainActivity  extends AppCompatActivity {
 
                                 builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                                     public void onClick(DialogInterface dialog, int whichButton) {
-                                        final String commento = input.getText().toString();
-                                        if (commento.trim().isEmpty()) return;
+                                    final String commento = input.getText().toString();
+                                    if (commento.trim().isEmpty()) return;
 
-                                        Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                        Gson gson = new Gson();
+                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
+                                    Gson gson = new Gson();
 
-                                        Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                        intent.putExtra("consegna", gson.toJson(item));
-                                        intent.putExtra("esito", 4);
-                                        intent.putExtra("commento", commento);
-                                        startActivityForResult(intent,CAMERA_REQUEST);
+                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
+                                    intent.putExtra("consegna", gson.toJson(item));
+                                    intent.putExtra("esito", 4);
+                                    intent.putExtra("commento", commento);
+                                    startActivityForResult(intent,CAMERA_REQUEST);
                                     }
                                 });
 
@@ -568,6 +634,7 @@ public class MainActivity  extends AppCompatActivity {
                                             @Override
                                             public void onClick(DialogInterface dialog, int which) {
                                                 dialog.dismiss();
+                                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
                                             }
                                         });
                                 AlertDialog alert = builder.create();
@@ -579,8 +646,36 @@ public class MainActivity  extends AppCompatActivity {
                     }
                 });
                 rv.setAdapter(consegnaAdapter);
+                final SwipeController swipeController = new SwipeController(new SwipeControllerActions() {
+                    @Override
+                    public void onLeftClicked(int position) {
+                        //TODO
+                    }
+
+                    @Override
+                    public void onRightClicked(int position) {
+                        //TODO
+                    }
+                });
+
+                ItemTouchHelper itemTouchhelper = new ItemTouchHelper(swipeController);
+                itemTouchhelper.attachToRecyclerView(rv);
+
+                rv.addItemDecoration(new RecyclerView.ItemDecoration() {
+                    @Override
+                    public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                        swipeController.onDraw(c);
+                    }
+                });
             }
         }
+    }
+
+    private void AbilitaEsiti(Button btnOk, Button btnMerceMancante, Button btnMerceDanneggiata, Button btnAltro, boolean b) {
+        btnOk.setEnabled(b);
+        btnMerceMancante.setEnabled(b);
+        btnMerceDanneggiata.setEnabled(b);
+        btnAltro.setEnabled(b);
     }
 
     @Override
@@ -627,6 +722,7 @@ public class MainActivity  extends AppCompatActivity {
                             Terminale terminale = new Terminale(MainActivity.this);
                             if (!(terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() &&
                                     terminale.getWebServer() != null && !terminale.getWebServer().isEmpty())) {
+
                                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                                 builder.setTitle(R.string.alterTitle);
                                 builder.setMessage(R.string.erroreAcquisizionePianodicarico);
@@ -691,9 +787,10 @@ public class MainActivity  extends AppCompatActivity {
                                 }
                             });
                             mail.setAddressTo(Consegna.GetMailCapoArea(getBaseContext()));
-                            mail.setAddressCc(Consegna.GetMailAgente(getBaseContext()) + "logistica@saporiditoscana.com;");
+                            mail.setAddressCc(Consegna.GetMailAgente(getBaseContext()) + Consegna.GetMailVettore(getBaseContext()) + "logistica@saporiditoscana.com;");
                             mail.setAddressCcn("agiannetti@saporiditoscana.com");
-                            mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
+//                            mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
+                            mail.setSubject("Giro " + giro.getDsGiro() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
                             mail.setMessage("");
                             mail.SendMail();
                         }else{
@@ -790,15 +887,25 @@ public class MainActivity  extends AppCompatActivity {
     }
 
     private void initializeViewGiro() {
-        Giro giro = new Giro(MainActivity.this);
-        try {
-            dtConsegna.setText(giro.getDtConsegnaFormatted());
-            txGiro.setText(giro.getDsGiro());
-            dtConsegna.setEnabled(false);
-        }catch (Exception e){
-            Logger.e(TAG, "one error on initializeViewGiro occurred: " + e.getMessage());
-            dtConsegna.setEnabled(true);
+        Logger.d(TAG, "initializeViewGiro STARTED");
+        Logger.d(TAG, "stato: "+ this.stato.id + " - " + this.stato.testo);
+        if (this.stato.id <= STATO.CONFIGURED.id) return;
+
+        giro = new Giro(MainActivity.this);
+
+        if (giro != null) {
+            try {
+                dtConsegna.setText(giro.getDtConsegnaFormatted());
+                txGiro.setText(giro.getDsGiro());
+                dtConsegna.setEnabled(false);
+//                Logger.d(TAG, "dtConsegna: "+ dtConsegna.getText());
+//                Logger.d(TAG, "txGiro: "+ txGiro.getText());
+            } catch (Exception e) {
+                Logger.e(TAG, "one error on initializeViewGiro occurred: " + e.getMessage());
+                dtConsegna.setEnabled(true);
+            }
         }
+        Logger.d(TAG, "initializeViewGiro END");
     }
 
     private void getJsonObjectAsync(String url) {
@@ -821,6 +928,7 @@ public class MainActivity  extends AppCompatActivity {
             JsonObject json = new JsonObject();
             json.addProperty("DtConsegna", senddate);
             json.addProperty("IdConducente", terminale.getIdConducente());
+            json.addProperty("IdDevice", terminale.getId());
 
             HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
             urlBuilder.addQueryParameter("StringSearch", json.toString());
@@ -874,6 +982,7 @@ public class MainActivity  extends AppCompatActivity {
                                 if (Giro.Insert(giro, MainActivity.this)) {
                                     Step.Update(STATO.UPLOAD_TRAVEL.id, MainActivity.this);
                                     UpdateStastoView();
+                                    initializeViewGiro();
                                 }
                             }catch(Exception e){
                                 Logger.e(TAG, "On error occurred: " + e.getLocalizedMessage());
@@ -883,8 +992,8 @@ public class MainActivity  extends AppCompatActivity {
                         MainActivity.this.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                TextView txGiro;
-                                txGiro =findViewById(R.id.txGiro);
+//                                TextView txGiro;
+//                                txGiro =findViewById(R.id.txGiro);
                                 txGiro.setText(new  Giro(MainActivity.this).getDsGiro());
                                 dtConsegna.setEnabled(false);
                                 if (txGiro != null &&  !txGiro.toString().isEmpty())
@@ -962,33 +1071,41 @@ public class MainActivity  extends AppCompatActivity {
                                 Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
                                     @Override
                                     public void callback(String message, Integer result) {
-                                        final String _messagio = message;
-                                        final Integer _result = result;
-                                        mHandler.post(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                lpb.hide();
-                                                if (_result == 0) {
-                                                    //update tabella consegna
-                                                    consegna.setIdEsitoConsegna(esito);
-                                                    consegna.setFlInviato("S");
-                                                    Consegna.Update(consegna, getBaseContext());
+                                    final String _messagio = message;
+                                    final Integer _result = result;
+                                    mHandler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                        lpb.hide();
+                                        if (_result == 0) {
+                                            //update tabella consegna
+                                            consegna.setIdEsitoConsegna(esito);
+                                            consegna.setFlInviato("S");
+                                            consegna.setCommento(comment.trim());
+                                            Consegna.Update(consegna, getBaseContext());
+                                            Consegna.InsertConsegna(consegna, getBaseContext());
 
-                                                    clientDialog.onBackPressed();
-                                                    consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
-                                                    if (consegnaAdapter.isCompleted()) {
-                                                        Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
-                                                        UpdateStastoView();
-                                                    }
-                                                }
-                                                Toast.makeText(getApplicationContext(), _messagio, Toast.LENGTH_LONG).show();
+                                            final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
+                                            final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+                                            final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+                                            final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+                                            clientDialog.onBackPressed();
+                                            consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
+                                            if (consegnaAdapter.isCompleted()) {
+                                                Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
+                                                UpdateStastoView();
                                             }
-                                        });
+                                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
+                                        }
+                                        Toast.makeText(getApplicationContext(), _messagio, Toast.LENGTH_LONG).show();
+                                        }
+                                    });
                                     }
                                 });
-                                mail.setAddressTo(consegna.getMailCapoArea() + consegna.getMailAge());
+                                mail.setAddressTo(consegna.getMailCapoArea() + consegna.getMailAge()+ consegna.getMailVettore());
                                 mail.setAddressCc("problemaconsegna@saporiditoscana.com;");
-                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
+//                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
+                                mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
                                 mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), esito));
                                 if (esito == 4) {
                                     mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), esito) +
@@ -1004,10 +1121,16 @@ public class MainActivity  extends AppCompatActivity {
                                 mail.SendMail();
                             break;
                         }
+                    }else {
+                        final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
+                        final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+                        final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+                        final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+                        AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
                     }
                 break;
                 case SCAN_REQUEST:
-                    Logger.d(TAG +"["+ SCAN_REQUEST + "]", "resultcode:" + resultCode);
+//                    Logger.d(TAG +"["+ SCAN_REQUEST + "]", "resultcode:" + resultCode);
                     if (resultCode == RESULT_OK) {
                         // The user picked a contact.
                         // The Intent's data Uri identifies which contact was selected.
@@ -1017,10 +1140,47 @@ public class MainActivity  extends AppCompatActivity {
                                 List<DbQuery> dbQueries = new ArrayList<DbQuery>();
                                 if (qrCodeText != null && !qrCodeText.toString().isEmpty()) {
 
-                                    Logger.d(TAG, "qrCode:" + qrCodeText);
+                                    Logger.d(TAG, "QrCode load successful");
 
                                     Terminale terminale = new Terminale(MainActivity.this);
-                                    String[] strings = qrCodeText.split("\\#");
+                                    String[] strings = {};
+
+                                    //controllo se la distinta ha il paragrafo del giro
+                                    String[] dati = qrCodeText.split("\\§");
+                                    if (dati.length > 1){
+                                        String[] s = dati[0].split("\\#");
+                                        String sGiro = s[0];
+                                        SimpleDateFormat f =new SimpleDateFormat("yyyyMMdd",Locale.ITALIAN);
+
+                                        if (giro== null) giro = new Giro(getBaseContext());
+
+                                        Date dtconsegna =  f.parse(s[1]);
+                                        Date d = f.parse(giro.getDtConsegnayyyyMMdd());
+
+                                        if (!(giro.getCdGiro().equals(sGiro) && dtconsegna.compareTo(d) == 0 && terminale.getIdConducente().equals(s[2]))){
+                                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                            builder.setTitle(R.string.alterTitle);
+                                            builder.setMessage(R.string.messaggio_giro_errato);
+                                            builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.dismiss();
+                                                    return;
+                                                }
+                                            });
+                                            AlertDialog alert = builder.create();
+                                            alert.show();
+                                        }else
+                                            strings = dati[1].split("\\#");
+
+                                    }else{
+                                        //qrcode vecchio non c'è il riferimento al Giro
+                                        strings = dati[0].split("\\#");
+                                    }
+
+                                    if (strings.length<=0)
+                                        strings = qrCodeText.split("\\#");
+
                                     for (int i = 0; i < strings.length; i++) {
                                         int annoReg = 2000;
                                         int nrReg = -1;
@@ -1059,7 +1219,6 @@ public class MainActivity  extends AppCompatActivity {
                     if (resultCode == Activity.RESULT_OK)
                     {
                         mTracking = false;
-    //                    stopService(new Intent(MainActivity.this, LocationMonitoringService.class));
                         stopService(new Intent(MainActivity.this, LocationService.class));
 
                         Toast.makeText(MainActivity.this,"Upload", Toast.LENGTH_SHORT).show();
@@ -1067,7 +1226,7 @@ public class MainActivity  extends AppCompatActivity {
                 break;
             }
         }catch (Exception e){
-            Logger.e(TAG,"on error occured on onActivityResult: " + e.getMessage(), e);
+            Logger.e(TAG,"one error occured on onActivityResult: " + e.getMessage(), e);
         }
     }
 
@@ -1162,6 +1321,7 @@ public class MainActivity  extends AppCompatActivity {
                             Type type = new TypeToken<Consegna>() {}.getType();
                             final Consegna consegna = gson.fromJson(result.getData().toString(), type);
                             if (consegna.getCdCli()>0) {
+
                                 if (!Consegna.Update(consegna, MainActivity.this)){
 
                                     mHandler.post(new Runnable() {

@@ -161,7 +161,8 @@ public class Mail extends BroadcastReceiver {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
+                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    sendMessageToUI(context, "Invio mail non riuscito.", -1);
                 }
 
                 @Override
