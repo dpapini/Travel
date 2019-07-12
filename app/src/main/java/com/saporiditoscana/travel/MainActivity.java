@@ -779,6 +779,7 @@ public class MainActivity  extends AppCompatActivity {
                                                 mTracking = true;
                                                 Step.Update(STATO.UPLOAD_START_TRAVEL.id, MainActivity.this);
                                                 UpdateStastoView();
+                                                UpdateStartGiro();
                                             }
 
                                             Toast.makeText(MainActivity.this, _message, Toast.LENGTH_SHORT).show();
@@ -1385,6 +1386,57 @@ public class MainActivity  extends AppCompatActivity {
                 getString(mainTextStringId),
                 BaseTransientBottomBar.LENGTH_INDEFINITE)
                 .setAction(getString(actionStringId), listener).show();
+    }
+
+    public void UpdateStartGiro() {
+        try {
+            final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+
+            Terminale terminale = new Terminale(getBaseContext());
+            String url = terminale.getWebServerUrlErgon() + "StartGiroConsegna";
+
+            JsonObject json = new JsonObject();
+            json.addProperty("CdDep", giro.getCdDep());
+            json.addProperty("CdGiro", giro.getCdGiro());
+            json.addProperty("DtConsegna", giro.getDtConsegnaddMMyyyy());
+            json.addProperty("TsStart", Gps.GetCurrentTimeStamp());
+
+            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
+            urlBuilder.addQueryParameter("EditJson", json.toString());
+            url = urlBuilder.build().toString();
+
+
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+            Response responses = null;
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    e.printStackTrace();
+                }
+
+                @Override
+                public void onResponse(Call call, final Response response) throws IOException {
+                    try {
+                        String jsonData = response.body().string();
+
+                        Gson gson = new Gson();
+                        final Result result = gson.fromJson(jsonData, Result.class);
+
+                        if (result.Error != null)
+                            Logger.e(TAG, result.getError().toString());
+
+                    } catch (Exception e) {
+                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+        }
     }
 
     //Callback received when a permissions request has been completed.
