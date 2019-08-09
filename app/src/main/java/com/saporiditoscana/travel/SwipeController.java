@@ -39,9 +39,9 @@ public class SwipeController extends Callback {
     @Override
     public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
 
-        if ("swipe_enable".equalsIgnoreCase((String)viewHolder.itemView.getTag()))
-            return makeMovementFlags(0,LEFT|RIGHT);
-        else return 0; //swipe disbilitato
+//        if ("swipe_enable".equalsIgnoreCase((String)viewHolder.itemView.getTag()))
+            return makeMovementFlags(0,LEFT);
+//        else return 0; //swipe disbilitato
 
 //        return makeMovementFlags(0, LEFT | RIGHT);
     }
@@ -89,12 +89,12 @@ public class SwipeController extends Callback {
         RectF leftButton = new RectF(itemView.getLeft(), itemView.getTop(), itemView.getLeft() + buttonWidthWithoutPadding, itemView.getBottom());
         p.setColor(Color.BLUE);
         c.drawRoundRect(leftButton, corners, corners, p);
-        drawText("PAGAMENTO", c, leftButton, p);
+        drawText("Altro", c, leftButton, p);
 
         RectF rightButton = new RectF(itemView.getRight() - buttonWidthWithoutPadding, itemView.getTop(), itemView.getRight(), itemView.getBottom());
         p.setColor(Color.RED);
         c.drawRoundRect(rightButton, corners, corners, p);
-        drawText("PAGAMENTO", c, rightButton, p);
+        drawText("Pagamento", c, leftButton, p);
 
         buttonInstance = null;
         if (buttonShowedState == ButtonsState.LEFT_VISIBLE) {

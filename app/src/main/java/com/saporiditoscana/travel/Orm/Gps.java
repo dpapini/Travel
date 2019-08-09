@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.Result;
@@ -14,8 +15,11 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -77,6 +81,25 @@ public class Gps {
         return dateFormat.format(new Date());
 
     }
+
+    public static String GetCurrentTimeStamp2JsonPrimitive()
+    {
+//        return  "/Date(" + new Date().getTime() + ")/";
+
+        Calendar calendar = Calendar.getInstance();
+        //get timezone
+        TimeZone timeZone = TimeZone.getTimeZone("Europe/Rome");
+        //set timezone
+        calendar.setTimeZone(timeZone);
+        //get offset od timezone
+        int offsetInMillis = timeZone.getOffset(calendar.getTimeInMillis());
+
+        String offset = String.format("%02d%02d", Math.abs(offsetInMillis / 3600000), Math.abs((offsetInMillis / 60000) % 60));
+        offset = (offsetInMillis >= 0 ? "+" : "-") + offset;
+
+        return "/Date(" + calendar.getTimeInMillis() + offset + ")/";
+    }
+
     public Gps(){}
 
     public static  Boolean Insert(Gps gps, Context context){

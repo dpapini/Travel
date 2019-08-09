@@ -4,7 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.DbHelper.DbQuery;
@@ -13,16 +12,19 @@ import com.saporiditoscana.travel.Result;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.StringJoiner;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class Consegna  implements Serializable {
@@ -51,13 +53,13 @@ public class Consegna  implements Serializable {
     private String  MailCapoArea;
     @SerializedName("Sequenza")
     private String Sequenza;
-    @SerializedName("idEsitoConsegna")
-    private int idEsitoConsegna;
-    @SerializedName("tsValidita")
-    private String tsValidita;
+    @SerializedName("IdEsitoConsegna")
+    private int IdEsitoConsegna;
+    @SerializedName("TsValidita")
+    private String TsValidita;
     @SerializedName("flInviato")
     private String flInviato;
-    @SerializedName("testo")
+    @SerializedName("Testo")
     private String testo;
     @SerializedName("TipoDocumento")
     private String TipoDocumento;
@@ -71,6 +73,14 @@ public class Consegna  implements Serializable {
     private String FlUploaded;
     @SerializedName("Commento")
     private String Commento;
+    @SerializedName("IdDevice")
+    private int IdDevice;
+    @SerializedName("FileName")
+    private String FileName;
+    @SerializedName("FileType")
+    private String FileType;
+    @SerializedName("FileBase64")
+    private String FileBase64;
 
 
     public Consegna(){}
@@ -96,8 +106,8 @@ public class Consegna  implements Serializable {
                     this.CdCapoArea =c.getString(c.getColumnIndex("cod_capo_area"));
                     this.MailAge = c.getString(c.getColumnIndex("mail_agente"));
                     this.MailCapoArea = c.getString(c.getColumnIndex("mail_capo_area"));
-                    this.idEsitoConsegna = c.getInt(c.getColumnIndex("id_esito_consegna"));
-                    this.tsValidita = c.getString(c.getColumnIndex("ts_validita"));
+                    this.IdEsitoConsegna = c.getInt(c.getColumnIndex("id_esito_consegna"));
+                    this.TsValidita = c.getString(c.getColumnIndex("ts_validita"));
                     this.flInviato = c.getString(c.getColumnIndex("flInviato"));
                     this.testo = c.getString(c.getColumnIndex("testo"));
                     this.Sequenza = c.getString(c.getColumnIndex("sequenza"));
@@ -107,6 +117,9 @@ public class Consegna  implements Serializable {
                     this.MailVettore = c.getString(c.getColumnIndex("mail_vettore"));
                     this.FlUploaded = c.getString(c.getColumnIndex("fl_uploaded"));
                     this.Commento = c.getString(c.getColumnIndex("commento"));
+                    this.FileName = c.getString(c.getColumnIndex("file_name"));
+                    this.FileType = c.getString(c.getColumnIndex("file_type"));
+                    this.FileBase64 = c.getString(c.getColumnIndex("file_base64"));
                 }
             }
         }catch (Exception e)
@@ -237,11 +250,11 @@ public class Consegna  implements Serializable {
     }
 
     public int getIdEsitoConsegna() {
-        return idEsitoConsegna;
+        return IdEsitoConsegna;
     }
 
     public void setIdEsitoConsegna(int idEsitoConsegna) {
-        this.idEsitoConsegna = idEsitoConsegna;
+        this.IdEsitoConsegna = idEsitoConsegna;
     }
 
     public String getSequenza() {
@@ -262,13 +275,17 @@ public class Consegna  implements Serializable {
 
     public void setFlInviato(String flInviato) {this.flInviato = flInviato;}
 
-    public String getTsValidita() {
-        return tsValidita;
+    public String getTsValidita() {return TsValidita;}
+
+    public String getTsValiditaFromJsonPrimitive() {
+        Date d = new Date(Long.parseLong(TsValidita.replaceAll("[^\\d.]", "")));
+        String myFormat = "yyyy/MM/dd hh:mm:ss"; //In which you need put here
+        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.ITALIAN);
+
+        return sdf.format(d);
     }
 
-    public void setTsValidita(String tsValidita) {
-        this.tsValidita = tsValidita;
-    }
+    public void setTsValidita(String tsValidita) {this.TsValidita = tsValidita;}
 
     public Integer getNumeroDocumento() {
         return NumeroDocumento;
@@ -302,14 +319,30 @@ public class Consegna  implements Serializable {
 
     public void setCommento(String commento) {this.Commento = commento;}
 
+    public int getIdDevice() {return IdDevice;}
+
+    public void setIdDevice(int idDevice) {IdDevice = idDevice;  }
+
+    public String getFileName() {return FileName;}
+
+    public void setFileName(String fileName) {this.FileName = fileName;}
+
+    public String getFileType() {return FileType;}
+
+    public void setFileType(String fileType) {this.FileType = fileType;}
+
+    public String getFileBase64() {return FileBase64;}
+
+    public void setFileBase64(String fileBase64) {this.FileBase64 = fileBase64;}
+
     public static DbQuery Insert(int AnnoReg, int NrReg){
         DbQuery dbQuery = new DbQuery();
         try{
             StringBuilder sb;
 
             sb = new StringBuilder();
-            sb.append("INSERT INTO t_consegna (anno_reg, nr_reg, numero_documento, tipo_documento, cod_cli, rag_soc, indirizzo, localita, cod_age, cod_capo_area, mail_agente, mail_capo_area, pagamento_contanti, mail_vettore, commento)");
-            sb.append("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
+            sb.append("INSERT INTO t_consegna (anno_reg, nr_reg, numero_documento, tipo_documento, cod_cli, rag_soc, indirizzo, localita, cod_age, cod_capo_area, mail_agente, mail_capo_area, pagamento_contanti, mail_vettore, commento, file_name, file_type, file_base64)");
+            sb.append("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
             dbQuery.setSql(sb.toString());
             String[] parameters = new String[]{String.valueOf(AnnoReg)
                     , String.valueOf(NrReg)
@@ -326,6 +359,9 @@ public class Consegna  implements Serializable {
                     , String.valueOf(0)  //pagamento_contanti
                     , ("") //mailvettore
                     , ("") //commento
+                    , ("") //file_name
+                    , ("") //file_type
+                    , ("") //file_base64
             };
             dbQuery.setParameters(parameters);
 
@@ -376,7 +412,7 @@ public class Consegna  implements Serializable {
         try{
             StringBuilder sb;
 
-            String tsCurrent = Gps.GetCurrentTimeStamp();
+            String tsCurrent = Gps.GetCurrentTimeStamp2JsonPrimitive(); //Gps.GetCurrentTimeStamp();
             sb = new StringBuilder();
             sb.append("UPDATE t_consegna SET cod_cli = ? ");
             sb.append("     , rag_soc = ? ");
@@ -397,6 +433,9 @@ public class Consegna  implements Serializable {
             sb.append("     , mail_vettore = ? ");
             sb.append("     , fl_uploaded = ? ");
             sb.append("     , commento = ? ");
+            sb.append("     , file_name = ? ");
+            sb.append("     , file_type = ? ");
+            sb.append("     , file_base64 = ? ");
 
             sb.append(" WHERE anno_reg = ? ");
             sb.append("   AND nr_reg = ? ");
@@ -421,6 +460,9 @@ public class Consegna  implements Serializable {
                     , String.valueOf(consegna.getMailVettore())
                     , String.valueOf(consegna.getFlUploaded())
                     , String.valueOf(consegna.getCommento())
+                    , String.valueOf(consegna.getFileName())
+                    , String.valueOf(consegna.getFileType())
+                    , String.valueOf(consegna.getFileBase64())
                     , String.valueOf(consegna.getAnnoReg())
                     , String.valueOf(consegna.getNrReg())
             };
@@ -438,6 +480,7 @@ public class Consegna  implements Serializable {
         catch (Exception e)
         {
             result = false;
+            Logger.e(TAG,e.getLocalizedMessage(), e);
         }
         return result;
     }
@@ -542,6 +585,9 @@ public class Consegna  implements Serializable {
                     consegna.setMailVettore(c.getString(c.getColumnIndex("mail_vettore")));
                     consegna.setFlUploaded(c.getString(c.getColumnIndex("fl_uploaded")));
                     consegna.setCommento(c.getString(c.getColumnIndex("commento")));
+                    consegna.setFileName(c.getString(c.getColumnIndex("file_name")));
+                    consegna.setFileType(c.getString(c.getColumnIndex("file_type")));
+                    consegna.setFileBase64(c.getString(c.getColumnIndex("file_base64")));
 
                     consegnas.add(consegna);
                 }
@@ -643,25 +689,40 @@ public class Consegna  implements Serializable {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
             Terminale terminale = new Terminale(context);
-            String url = terminale.getWebServerUrlErgon() + "InsertConsegna";
+//            String url = terminale.getWebServerUrlErgon() + "InsertConsegna";
+            String url = terminale.getWebServerUrlErgon() + "InsertConsegnaEsito";
 
-            JsonObject json = new JsonObject();
-            json.addProperty("AnnoReg", consegna.getAnnoReg());
-            json.addProperty("NrReg", consegna.getNrReg());
-            json.addProperty("IdEsitoConsegna", consegna.getIdEsitoConsegna());
-            json.addProperty("Testo", consegna.getTesto());
-            json.addProperty("TsValidita", consegna.getTsValidita());
-            json.addProperty("IdDevice", terminale.getId());
-            json.addProperty("Commento", consegna.getCommento());
+//            JsonObject json = new JsonObject();
+//            json.addProperty("AnnoReg", consegna.getAnnoReg());
+//            json.addProperty("NrReg", consegna.getNrReg());
+//            json.addProperty("IdEsitoConsegna", consegna.getIdEsitoConsegna());
+//            json.addProperty("Testo", consegna.getTesto());
+//            json.addProperty("TsValidita", consegna.getTsValidita());
+//            json.addProperty("IdDevice", terminale.getId());
+//            json.addProperty("Commento", consegna.getCommento());
+//
+//            json.addProperty("FileName", consegna.getFileName());
+//            json.addProperty("FileType", consegna.getFileType());
+//            json.addProperty("FileBase64", consegna.getFileBase64());
 
-            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
-            urlBuilder.addQueryParameter("EditJson", json.toString());
-            url = urlBuilder.build().toString();
+//            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
+//            urlBuilder.addQueryParameter("EditJson", json.toString());
+//            url = urlBuilder.build().toString();
+//
+//            OkHttpClient client = new OkHttpClient();
+//            Request request = new Request.Builder()
+//                    .url(url)
+//                    .build();
+//            Response responses = null;
 
+            Gson gson = new Gson();
+
+            consegna.setIdDevice(terminale.getId()); //recupero l'id del device
 
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
                     .url(url)
+                    .post(RequestBody.create(mediaType, gson.toJson(consegna)))
                     .build();
             Response responses = null;
 
@@ -710,8 +771,8 @@ public class Consegna  implements Serializable {
                 .add("MailAge='" + MailAge + "'")
                 .add("MailCapoArea='" + MailCapoArea + "'")
                 .add("Sequenza='" + Sequenza + "'")
-                .add("idEsitoConsegna=" + idEsitoConsegna)
-                .add("tsValidita='" + tsValidita + "'")
+                .add("IdEsitoConsegna=" + IdEsitoConsegna)
+                .add("TsValidita='" + TsValidita + "'")
                 .add("flInviato='" + flInviato + "'")
                 .add("testo='" + testo + "'")
                 .add("TipoDocumento='" + TipoDocumento + "'")

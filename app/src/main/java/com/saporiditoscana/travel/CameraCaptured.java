@@ -101,6 +101,7 @@ public class CameraCaptured extends AppCompatActivity {
                     resultIntent.putExtra("esito", esito);//le ripasso alla pari
                     resultIntent.putExtra("consegna", consegna);//le ripasso alla pari
                     resultIntent.putExtra("commento", commento);
+                    resultIntent.putExtra("filename", file.getName());
                     setResult(Activity.RESULT_OK, resultIntent);
                 }
                 else setResult(Activity.RESULT_CANCELED, resultIntent);

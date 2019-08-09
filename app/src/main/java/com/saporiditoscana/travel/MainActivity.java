@@ -888,8 +888,8 @@ public class MainActivity  extends AppCompatActivity {
     }
 
     private void initializeViewGiro() {
-        Logger.d(TAG, "initializeViewGiro STARTED");
-        Logger.d(TAG, "stato: "+ this.stato.id + " - " + this.stato.testo);
+//        Logger.d(TAG, "initializeViewGiro STARTED");
+//        Logger.d(TAG, "stato: "+ this.stato.id + " - " + this.stato.testo);
         if (this.stato.id <= STATO.CONFIGURED.id) return;
 
         giro = new Giro(MainActivity.this);
@@ -906,7 +906,7 @@ public class MainActivity  extends AppCompatActivity {
                 dtConsegna.setEnabled(true);
             }
         }
-        Logger.d(TAG, "initializeViewGiro END");
+//        Logger.d(TAG, "initializeViewGiro END");
     }
 
     private void getJsonObjectAsync(String url) {
@@ -1064,6 +1064,7 @@ public class MainActivity  extends AppCompatActivity {
                                 final String c = data.getExtras().get("consegna").toString();
                                 final Consegna consegna = gson.fromJson(c,Consegna.class);
                                 final String comment = data.getExtras().get("commento").toString();
+                                final String fileName = data.getStringExtra("filename");
 
                                 final int esito =  data.getIntExtra("esito",-1);// Integer.parseInt(data.getExtras().get("esito").toString());
                                 final String image64 =  data.getExtras().get("image64").toString();
@@ -1083,6 +1084,9 @@ public class MainActivity  extends AppCompatActivity {
                                             consegna.setIdEsitoConsegna(esito);
                                             consegna.setFlInviato("S");
                                             consegna.setCommento(comment.trim());
+                                            consegna.setFileName(fileName);
+                                            consegna.setFileType("image/jpg");
+                                            consegna.setFileBase64(image64);
                                             Consegna.Update(consegna, getBaseContext());
                                             Consegna.InsertConsegna(consegna, getBaseContext());
 
@@ -1325,21 +1329,18 @@ public class MainActivity  extends AppCompatActivity {
 
                                 if (!Consegna.Update(consegna, MainActivity.this)){
 
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                            builder.setTitle(R.string.alterTitle);
-                                            builder.setMessage(R.string.documentonp);
-                                            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {
+                                    mHandler.post(() -> {
+                                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                        builder.setTitle(R.string.alterTitle);
+                                        builder.setMessage(R.string.documentonp);
+                                        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
 
-                                                }
-                                            });
-                                            AlertDialog dialog = builder.create();
-                                            dialog.show();
-                                        }
+                                            }
+                                        });
+                                        AlertDialog dialog = builder.create();
+                                        dialog.show();
                                     });
 
                                 }

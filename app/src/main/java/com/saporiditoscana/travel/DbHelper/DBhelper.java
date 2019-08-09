@@ -17,7 +17,7 @@ import com.saporiditoscana.travel.Orm.Terminale;
 public class DBhelper extends SQLiteOpenHelper {
     private static final String TAG = "DBhelper";
     public static final String DBNAME="TRAVELDB";
-    public static final Integer DBVERSION=3;
+    public static final Integer DBVERSION=4;
 
     public static final String T_TERMINALE = "t_terminale";
     public static final String T_CONSEGNA = "t_consegna";
@@ -100,6 +100,9 @@ public class DBhelper extends SQLiteOpenHelper {
             sql.append("  \"mail_vettore\" nvarchar(250) NOT NULL DEFAULT '', ");
             sql.append("  \"fl_uploaded\" char(01) NOT NULL DEFAULT 'N' ,");
             sql.append("  \"commento\" nvarchar(250) NOT NULL DEFAULT '', ");
+            sql.append("  \"file_name\" nvarchar(250) , ");
+            sql.append("  \"file_type\" nvarchar(250) , ");
+            sql.append("  \"file_base64\" text , ");
             sql.append(" PRIMARY KEY(\"anno_reg\", \"nr_reg\") ");
             sql.append(");");
             db.execSQL(sql.toString());
@@ -162,6 +165,12 @@ public class DBhelper extends SQLiteOpenHelper {
                 db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD fl_uploaded char(01) NOT NULL DEFAULT 'N' ");
             if (!fieldExists(db,T_CONSEGNA, "commento"))
                 db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD commento nvarchar(250) NOT NULL DEFAULT '' ");
+            if (!fieldExists(db,T_CONSEGNA, "file_name"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD file_name nvarchar(250)  ");
+            if (!fieldExists(db,T_CONSEGNA, "file_type"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD file_type nvarchar(250)  ");
+            if (!fieldExists(db,T_CONSEGNA, "file_base64"))
+                db.execSQL(" ALTER TABLE "+ T_CONSEGNA +" ADD file_base64 text ");
 
         }
 
