@@ -18,6 +18,7 @@
     <string name="dsgiro">Giro</string>
     <string name="documentonp">Documento non presente su Piano di Carico</string>
     <string name="alterTitle">Attenzione</string>
+    <string name="chooseSourcePicture">Seleziona una foto</string>
     <string name="erroreAcquisizionePianodicarico">Impossibile acquisire il PIANO DI CARICO. Configurazione terminale non completata</string>
     <string name="errorePartenzaGiro">Impossibile iniziare il giro</string>
     <string name="camerenodisp">Camera non disponibile in stato: </string>
@@ -35,4 +36,10 @@
     <string name="no">NO</string>
     <string name="si">SI</string>
     <string name="messaggio_giro_errato">Stai provando a carica un giro/consegna non assegnato all\'autista indicato.</string>
+    <string name="btn_annulla">Annulla</string>
+    <string name="btn_incasso">pagamento</string>
+    <string name="btn_variazione_esito">Variazione consegna</string>
+    <string name="message_mail_consegna">Consegna effettuata con esito:</string>
+    <string name="message_mail_variazione">Variazione esito consegna :</string>
+    <string name="pick_image_intent_text">Seleziona una foto</string>
 </resources>

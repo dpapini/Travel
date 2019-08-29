@@ -12,6 +12,7 @@ import com.saporiditoscana.travel.Result;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import android.content.BroadcastReceiver;
 
@@ -151,7 +152,8 @@ public class Mail extends BroadcastReceiver {
             m.setMessage(this.Message+  "</br>" + terminale.getConducente());
             m.setAttachCollection(this.AttachCollection);
 
-            OkHttpClient client = new OkHttpClient();
+            OkHttpClient client = new  OkHttpClient();
+
             Request request = new Request.Builder()
                     .url(url)
                     .post(RequestBody.create(mediaType, gson.toJson(m)))

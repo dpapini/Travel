@@ -4,9 +4,11 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -19,10 +21,10 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.InputType;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -30,6 +32,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,7 +56,6 @@ import com.saporiditoscana.travel.Orm.Gps;
 import com.saporiditoscana.travel.Orm.Mail;
 import com.saporiditoscana.travel.Orm.Step;
 import com.saporiditoscana.travel.Orm.Terminale;
-import com.saporiditoscana.travel.Services.LocationMonitoringService;
 import com.saporiditoscana.travel.Services.LocationService;
 
 import java.io.IOException;
@@ -94,6 +96,8 @@ public class MainActivity  extends AppCompatActivity {
     static final int CAMERA_REQUEST = 1;  // The request code
     static final int SCAN_REQUEST = 2;  // The request code
     static final int UPLOAD_REQUEST = 3;  // The request code
+    static final int GALLERY_REQUEST = 4;
+    static final int INCASSO_REQUEST = 5;
     static final int RESULT_OK = 0;
     private boolean mTracking = false;
     static int esitoConsegna = 0;
@@ -105,7 +109,9 @@ public class MainActivity  extends AppCompatActivity {
     public static EditText dtConsegna ;
     public static TextView txGiro;
     public Dialog clientDialog;
+    public Dialog clientOtherDialog;
     public Giro giro;
+    public ImageView imageView;
 
     private Handler mHandler;
     private ContentLoadingProgressBar lpb;
@@ -321,7 +327,6 @@ public class MainActivity  extends AppCompatActivity {
         // request previously, but didn't check the "Don't ask again" checkbox.
         if (shouldProvideRationale || shouldProvideRationale2 || shouldProvideRationale3 ||
                 shouldProvideRationale4 || shouldProvideRationale5 || shouldProvideRationale6 )  {
-//            Log.i(TAG, "Displaying permission rationale to provide additional context.");
             showSnackbar(R.string.permission_rationale,
                     android.R.string.ok, new View.OnClickListener() {
                         @Override
@@ -338,7 +343,6 @@ public class MainActivity  extends AppCompatActivity {
                         }
                     });
         } else {
-//            Log.i(TAG, "Requesting permission");
             // Request permission. It's possible this can be auto answered if device policy
             // sets the permission in a given state or the img_user denied the permission
             // previously and checked "Never ask again".
@@ -412,239 +416,10 @@ public class MainActivity  extends AppCompatActivity {
                     public void onItemClick(final Consegna item) {
                         if (GetStatApp().id != STATO.UPLOAD_START_TRAVEL.id) return;
 
-                        clientDialog = new Dialog(MainActivity.this);
-                        clientDialog.setContentView(R.layout.dialog_cliente);
-                        clientDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-                        //recupero i campi del dialog
-                        TextView cdCliente = clientDialog.findViewById(R.id.fragmentCdCli);
-                        TextView ragioneSociale = clientDialog.findViewById(R.id.fragmentRagioneSoiale);
-                        TextView indirizzo = clientDialog.findViewById(R.id.fragmentIndirizzo);
-                        TextView documento =clientDialog.findViewById(R.id.fragmentDocumento);
-                        //valorizzo i campi
-                        cdCliente.setText(String.valueOf(item.getCdCli()));
-                        ragioneSociale.setText(item.getRagioneSociale());
-                        indirizzo.setText(item.getIndirizzo());
-                        documento.setText(item.getTipoDocumento() + " " + String.valueOf(item.getNumeroDocumento()));
-
-                        final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
-                        final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
-                        final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
-                        final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
-
-                        btnOk.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
-
-                            //Chiedo se è presente o meno il cliente
-                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                            builder.setTitle(R.string.alterTitle);
-                            builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
-                            builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                esitoConsegna = 5;
-                                Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                Gson gson = new Gson();
-
-                                Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                intent.putExtra("consegna", gson.toJson(item));
-                                intent.putExtra("esito", esitoConsegna);
-                                intent.putExtra("commento", "");
-                                startActivityForResult(intent,CAMERA_REQUEST);
-                                }
-                            });
-
-                            builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                esitoConsegna = 1;
-
-                                Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
-                                    @Override
-                                    public void callback(final String message, Integer result) {
-                                        final String _message = message;
-                                        final Integer _result = result;
-                                        mHandler.post(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                lpb.hide();
-                                                if (_result == 0) {
-                                                    item.setFlInviato("S");
-                                                    item.setIdEsitoConsegna(esitoConsegna);
-                                                    item.setCommento("");
-                                                    Consegna.Update(item, getBaseContext());
-                                                    Consegna.InsertConsegna(item, getBaseContext());//scrivo sul db del server
-
-                                                    clientDialog.onBackPressed();
-                                                    consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
-                                                    if (consegnaAdapter.isCompleted()) {
-                                                        Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
-                                                        UpdateStastoView();
-                                                    }
-                                                }
-                                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
-                                                Toast.makeText(getApplicationContext(), _message, Toast.LENGTH_LONG).show();
-                                            }
-                                        });
-                                    }
-                                });
-                                mail.setAddressTo(item.getMailAge() + item.getMailVettore());
-                                mail.setAddressCc("logistica@saporiditoscana.com");
-//                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
-                                mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
-                                mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), 1));
-                                mail.SendMail();
-                                }
-                            });
-                            AlertDialog alert = builder.create();
-                            alert.show();
-                            }
-                        });
-
-                        //merce mancante
-                        btnMerceMancante.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
-
-                                //Chiedo se è presente o meno il cliente
-                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                builder.setTitle(R.string.alterTitle);
-                                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
-                                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                    esitoConsegna = 6;
-
-                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                    Gson gson = new Gson();
-
-                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                    intent.putExtra("consegna", gson.toJson(item));
-                                    intent.putExtra("esito", esitoConsegna);
-                                    intent.putExtra("commento", "");
-                                    startActivityForResult(intent,CAMERA_REQUEST);
-                                    }
-                                });
-
-                                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                    esitoConsegna = 2;
-
-                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                    Gson gson = new Gson();
-
-                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                    intent.putExtra("consegna", gson.toJson(item));
-                                    intent.putExtra("esito", esitoConsegna);
-                                    intent.putExtra("commento", "");
-                                    startActivityForResult(intent,CAMERA_REQUEST);
-                                    }
-                                });
-                                AlertDialog alert = builder.create();
-                                alert.show();
-                            }
-                        });
-
-                        //merce danneggiata
-                        btnMerceDanneggiata.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
-
-                                //Chiedo se è presente o meno il cliente
-                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                builder.setTitle(R.string.alterTitle);
-                                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
-                                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                    esitoConsegna = 7;
-
-                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                    Gson gson = new Gson();
-
-                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                    intent.putExtra("consegna", gson.toJson(item));
-                                    intent.putExtra("esito", esitoConsegna);
-                                    intent.putExtra("commento", "");
-                                    startActivityForResult(intent,CAMERA_REQUEST);
-                                    }
-                                });
-
-                                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                    esitoConsegna = 3;
-
-                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                    Gson gson = new Gson();
-
-                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                    intent.putExtra("consegna", gson.toJson(item));
-                                    intent.putExtra("esito", esitoConsegna);
-                                    intent.putExtra("commento", "");
-                                    startActivityForResult(intent,CAMERA_REQUEST);
-                                    }
-                                });
-
-                                AlertDialog alert = builder.create();
-                                alert.show();
-                            }
-                        });
-
-                        //altro
-                        btnAltro.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
-
-                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                builder.setTitle("Comment");
-
-                                final EditText input = new EditText(MainActivity.this);
-
-                                input.setInputType(InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-                                input.setSingleLine(false);
-                                input.setLines(5);
-                                input.setMaxLines(5);
-                                input.setGravity(Gravity.LEFT | Gravity.TOP);
-                                builder.setView(input);
-
-                                builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int whichButton) {
-                                    final String commento = input.getText().toString();
-                                    if (commento.trim().isEmpty()) return;
-
-                                    Step.Update(STATO.GET_PICTURE_CAMERA.id,MainActivity.this);
-                                    Gson gson = new Gson();
-
-                                    Intent intent = new Intent(getBaseContext(),  CameraCaptured.class);
-                                    intent.putExtra("consegna", gson.toJson(item));
-                                    intent.putExtra("esito", 4);
-                                    intent.putExtra("commento", commento);
-                                    startActivityForResult(intent,CAMERA_REQUEST);
-                                    }
-                                });
-
-                                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
-                                                dialog.dismiss();
-                                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
-                                            }
-                                        });
-                                AlertDialog alert = builder.create();
-                                alert.show();
-                            }
-                        });
-
-                        clientDialog.show();
+                        settingContexClientDialog(item);
                     }
                 });
+
                 rv.setAdapter(consegnaAdapter);
                 final SwipeController swipeController = new SwipeController(new SwipeControllerActions() {
                     @Override
@@ -655,6 +430,38 @@ public class MainActivity  extends AppCompatActivity {
                     @Override
                     public void onRightClicked(int position) {
                         //TODO
+                        clientOtherDialog = new Dialog(MainActivity.this);
+                        clientOtherDialog.setContentView(R.layout.dialog_altro);
+                        clientOtherDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                        final Button btnAnnulla = clientOtherDialog.findViewById(R.id.btnAnnulla);
+                        final Button btnIncasso = clientOtherDialog.findViewById(R.id.btnIncasso);
+                        final Button btnVariazione = clientOtherDialog.findViewById(R.id.btnVariazione);
+
+                        Gson gson = new Gson();
+                        final Consegna item = consegnaAdapter.getItemByPosition(position);
+
+                        btnAnnulla.setOnClickListener(v -> clientOtherDialog.onBackPressed());
+                        btnVariazione.setOnClickListener(v -> {
+//
+//                            Intent intentGallery = new Intent(Intent.ACTION_PICK);
+//                            intentGallery.setType("image/*"); // Sets the type as image/*. This ensures only components of type image are selected
+//                            String[] mimeTypes = {"image/jpeg", "image/png"}; //We pass an extra array with the accepted mime types. This will ensure only components with these MIME types as targeted.
+//                            intentGallery.putExtra(Intent.EXTRA_MIME_TYPES,mimeTypes);
+//                            intentGallery.putExtra("consegna", gson.toJson(item));
+//
+//                            startActivityForResult(intentGallery,GALLERY_REQUEST_CODE);
+//
+                            settingContexClientDialog(item);
+                        });
+
+                        btnIncasso.setOnClickListener(v->{
+                            Intent intent = new Intent(MainActivity.this, CameraCaptured.class);
+                            intent.putExtra("consegna", item.getCliente());
+                            startActivityForResult(intent, INCASSO_REQUEST);
+                        });
+
+                        clientOtherDialog.show();
                     }
                 });
 
@@ -669,6 +476,224 @@ public class MainActivity  extends AppCompatActivity {
                 });
             }
         }
+    }
+
+    private void settingContexClientDialog(Consegna item) {
+        int position = consegnaAdapter.findItem(item.getAnnoReg() - 2000 + String.valueOf(item.getNrReg()));
+        final boolean isNew =  rv.getLayoutManager().findViewByPosition(position).getTag() == null;
+
+
+        clientDialog = new Dialog(MainActivity.this);
+        clientDialog.setContentView(R.layout.dialog_cliente);
+        clientDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        //recupero i campi del dialog
+        TextView cdCliente = clientDialog.findViewById(R.id.fragmentCdCli);
+        TextView ragioneSociale = clientDialog.findViewById(R.id.fragmentRagioneSoiale);
+        TextView indirizzo = clientDialog.findViewById(R.id.fragmentIndirizzo);
+        TextView documento =clientDialog.findViewById(R.id.fragmentDocumento);
+        //valorizzo i campi
+        cdCliente.setText(String.valueOf(item.getCdCli()));
+        ragioneSociale.setText(item.getRagioneSociale());
+        indirizzo.setText(item.getIndirizzo());
+        documento.setText(item.getTipoDocumento() + " " + String.valueOf(item.getNumeroDocumento()));
+
+        final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
+        final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+        final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+        final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+
+        btnOk.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
+
+                //Chiedo se è presente o meno il cliente
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.alterTitle);
+                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            esitoConsegna = 5;
+
+                            startIntentCamera(item, esitoConsegna, "", isNew);
+                        }
+                    }
+                );
+
+                builder.setPositiveButton(R.string.si, (dialog, which) -> {
+                    esitoConsegna = 1;
+
+                    Mail mail = new Mail(getBaseContext(), (message, result) -> {
+                        final String _message = message;
+                        final Integer _result = result;
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                lpb.hide();
+                                if (_result == 0) {
+                                    item.setFlInviato("S");
+                                    item.setIdEsitoConsegna(esitoConsegna);
+                                    item.setCommento("");
+                                    Consegna.Update(item, getBaseContext());
+
+                                    if (isNew)
+                                        Consegna.InsertConsegna(item, getBaseContext());//scrivo sul db del server
+                                    else Consegna.UpdateConsegna(item, getBaseContext());//scrivo sul db del server
+
+                                    clientDialog.onBackPressed();
+                                    consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
+                                    if (consegnaAdapter.isCompleted()) {
+                                        Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
+                                        UpdateStastoView();
+                                    }
+                                }
+                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
+                                Toast.makeText(getApplicationContext(), _message, Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    });
+                    mail.setAddressTo(item.getMailAge() + item.getMailVettore());
+                    mail.setAddressCc("logistica@saporiditoscana.com");
+                    mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + item.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]# ");
+                    if (isNew)
+                        mail.setMessage(getString(R.string.message_mail_consegna) + EsitoConsegna.GetTesto(getBaseContext(), 1));
+                    else mail.setMessage(getString(R.string.message_mail_variazione) + EsitoConsegna.GetTesto(getBaseContext(), 1));
+
+                    mail.SendMail();
+                });
+                AlertDialog alert = builder.create();
+                alert.show();
+            }
+        });
+
+        //merce mancante
+        btnMerceMancante.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
+
+                //Chiedo se è presente o meno il cliente
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.alterTitle);
+                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        esitoConsegna = 6;
+
+                        startIntentCamera(item, esitoConsegna, "", isNew);
+                    }
+                });
+
+                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        esitoConsegna = 2;
+
+                        startIntentCamera(item, esitoConsegna, "", isNew);
+                    }
+                });
+                AlertDialog alert = builder.create();
+                alert.show();
+            }
+        });
+
+        //merce danneggiata
+        btnMerceDanneggiata.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
+
+                //Chiedo se è presente o meno il cliente
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.alterTitle);
+                builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
+                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        esitoConsegna = 7;
+
+                        startIntentCamera(item, esitoConsegna, "", isNew);
+                    }
+                });
+
+                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        esitoConsegna = 3;
+
+                        startIntentCamera(item, esitoConsegna, "" ,isNew);
+                    }
+                });
+
+                AlertDialog alert = builder.create();
+                alert.show();
+            }
+        });
+
+        //altro
+        btnAltro.setOnClickListener(v -> {
+            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Comment");
+
+            final EditText input = new EditText(MainActivity.this);
+
+            input.setInputType(InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            input.setSingleLine(false);
+            input.setLines(5);
+            input.setMaxLines(5);
+            input.setGravity(Gravity.LEFT | Gravity.TOP);
+            builder.setView(input);
+
+            builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+                final String commento = input.getText().toString();
+                if (commento.trim().isEmpty()) return;
+
+                    startIntentCamera(item, 4, commento, isNew);
+                }
+            });
+
+            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
+                        }
+                    });
+            AlertDialog alert = builder.create();
+            alert.show();
+        });
+
+        clientDialog.show();
+    }
+
+    private void startIntentCamera(Consegna item, int esitoConsegna, String s, boolean isNew) {
+        Step.Update(STATO.GET_PICTURE_CAMERA.id, MainActivity.this);
+        Intent intent = getIntentCamera(item, esitoConsegna, s, isNew);
+        startActivityForResult(intent, CAMERA_REQUEST);
+    }
+
+    private Intent getIntentCamera(Consegna item, int esitoConsegna, String s, boolean isNew) {
+        Logger.d(TAG, "getIntentCamera");
+        Gson gson = new Gson();
+
+        if (!isNew) {
+            item.setFileBase64("");
+            item.setFileType("");
+            item.setFileName("");
+        }
+
+        Intent intent = new Intent(getBaseContext(), CameraCaptured.class);
+        intent.putExtra("consegna", gson.toJson(item));
+        intent.putExtra("esito", esitoConsegna);
+        intent.putExtra("commento", s);
+        intent.putExtra("isNew", isNew);
+        return intent;
     }
 
     private void AbilitaEsiti(Button btnOk, Button btnMerceMancante, Button btnMerceDanneggiata, Button btnAltro, boolean b) {
@@ -1052,12 +1077,14 @@ public class MainActivity  extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         try {
             // Check which request we're responding to
+//            Logger.d(TAG+  " onActivityResult" , "requestCode: " + requestCode);
             switch(requestCode){
                 case CAMERA_REQUEST:
                     if (resultCode == Activity.RESULT_OK) {
-                        switch (GetStatApp()) {
+                        switch (GetStatApp()) { //leggo lo stato dell'applicazione
                             case GET_PICTURE_CAMERA:
                                 if (data == null) return;
+//                                Logger.d(TAG,  " GET_PICTURE_CAMERA" );
                                 lpb.show();
                                 Gson gson = new Gson();
 
@@ -1065,6 +1092,7 @@ public class MainActivity  extends AppCompatActivity {
                                 final Consegna consegna = gson.fromJson(c,Consegna.class);
                                 final String comment = data.getExtras().get("commento").toString();
                                 final String fileName = data.getStringExtra("filename");
+                                final boolean isNew = data.getBooleanExtra("isNew", false);
 
                                 final int esito =  data.getIntExtra("esito",-1);// Integer.parseInt(data.getExtras().get("esito").toString());
                                 final String image64 =  data.getExtras().get("image64").toString();
@@ -1088,7 +1116,9 @@ public class MainActivity  extends AppCompatActivity {
                                             consegna.setFileType("image/jpg");
                                             consegna.setFileBase64(image64);
                                             Consegna.Update(consegna, getBaseContext());
-                                            Consegna.InsertConsegna(consegna, getBaseContext());
+                                            if (isNew)
+                                                Consegna.InsertConsegna(consegna, getBaseContext());
+                                            else Consegna.UpdateConsegna(consegna, getBaseContext());
 
                                             final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
                                             final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
@@ -1108,10 +1138,13 @@ public class MainActivity  extends AppCompatActivity {
                                     }
                                 });
                                 mail.setAddressTo(consegna.getMailCapoArea() + consegna.getMailAge()+ consegna.getMailVettore());
-                                mail.setAddressCc("problemaconsegna@saporiditoscana.com;");
-//                                mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
+                                if (esito != 5 ) mail.setAddressCc("problemaconsegna@saporiditoscana.com;");
                                 mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
-                                mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), esito));
+
+                                if (isNew)
+                                    mail.setMessage(getString(R.string.message_mail_consegna) + EsitoConsegna.GetTesto(getBaseContext(), esito));
+                                else mail.setMessage(getString(R.string.message_mail_variazione) + EsitoConsegna.GetTesto(getBaseContext(), esito));
+
                                 if (esito == 4) {
                                     mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), esito) +
                                             System.lineSeparator() +
@@ -1227,6 +1260,49 @@ public class MainActivity  extends AppCompatActivity {
                         stopService(new Intent(MainActivity.this, LocationService.class));
 
                         Toast.makeText(MainActivity.this,"Upload", Toast.LENGTH_SHORT).show();
+                    }
+                break;
+                case GALLERY_REQUEST:
+                    if (resultCode == Activity.RESULT_OK){
+                        if (data.getData() == null) return;
+
+                        Gson gson = new Gson();
+
+                        final String c = data.getExtras().get("consegna").toString();
+                        final Consegna item = gson.fromJson(c,Consegna.class);
+
+                        Uri selectedImage = data.getData();
+                        imageView.setImageURI(selectedImage);
+
+                        settingContexClientDialog(item);
+                    }
+                break;
+                case INCASSO_REQUEST:
+                    if (resultCode == Activity.RESULT_OK){
+                        if (data == null) return;
+
+                        final String c = data.getExtras().get("consegna").toString();
+
+                        Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
+                            @Override
+                            public void callback(String message, Integer result) {
+                                final String _messagio = message;
+                                final Integer _result = result;
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        lpb.hide();
+                                        if (_result == 0) clientOtherDialog.onBackPressed();
+
+                                        Toast.makeText(getApplicationContext(), _messagio, Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            }
+                        });
+                        mail.setAddressTo("creditogr@saporiditoscana.com");
+                        mail.setSubject("Incasso - Cliente " + c  + "[" + Gps.GetCurrentTimeStamp()+"]");
+                        mail.setMessage("Copia incasso");
+                        mail.SendMail();
                     }
                 break;
             }

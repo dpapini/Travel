@@ -28,9 +28,6 @@ public class SwipeController extends Callback {
     private RectF buttonInstance =  null;
     private  SwipeControllerActions buttonsActions = null;
 
-    public  SwipeController(){
-    }
-
 
     public  SwipeController(SwipeControllerActions buttonActions){
         this.buttonsActions = buttonActions;
@@ -39,9 +36,9 @@ public class SwipeController extends Callback {
     @Override
     public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
 
-//        if ("swipe_enable".equalsIgnoreCase((String)viewHolder.itemView.getTag()))
+        if ("swipe_enable".equalsIgnoreCase((String)viewHolder.itemView.getTag()))
             return makeMovementFlags(0,LEFT);
-//        else return 0; //swipe disbilitato
+        else return 0; //swipe disabilitato
 
 //        return makeMovementFlags(0, LEFT | RIGHT);
     }
@@ -52,9 +49,13 @@ public class SwipeController extends Callback {
     }
 
     @Override
+    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+    }
+
+    @Override
     public int convertToAbsoluteDirection(int flags, int layoutDirection) {
         if (swipeBack) {
-            swipeBack = false;
+            swipeBack = buttonShowedState != ButtonsState.GONE;
             return 0;
         }
         return super.convertToAbsoluteDirection(flags, layoutDirection);
@@ -79,42 +80,6 @@ public class SwipeController extends Callback {
         currentItemViewHolder = viewHolder;
     }
 
-    private void drawButtons(Canvas c, RecyclerView.ViewHolder viewHolder) {
-        float buttonWidthWithoutPadding = buttonWidth - 20;
-        float corners = 16;
-
-        View itemView = viewHolder.itemView;
-        Paint p = new Paint();
-
-        RectF leftButton = new RectF(itemView.getLeft(), itemView.getTop(), itemView.getLeft() + buttonWidthWithoutPadding, itemView.getBottom());
-        p.setColor(Color.BLUE);
-        c.drawRoundRect(leftButton, corners, corners, p);
-        drawText("Altro", c, leftButton, p);
-
-        RectF rightButton = new RectF(itemView.getRight() - buttonWidthWithoutPadding, itemView.getTop(), itemView.getRight(), itemView.getBottom());
-        p.setColor(Color.RED);
-        c.drawRoundRect(rightButton, corners, corners, p);
-        drawText("Pagamento", c, leftButton, p);
-
-        buttonInstance = null;
-        if (buttonShowedState == ButtonsState.LEFT_VISIBLE) {
-            buttonInstance = leftButton;
-        }
-        else if (buttonShowedState == ButtonsState.RIGHT_VISIBLE) {
-            buttonInstance = rightButton;
-        }
-    }
-
-    private void drawText(String text, Canvas c, RectF button, Paint p) {
-        float textSize = 30;
-        p.setColor(Color.WHITE);
-        p.setAntiAlias(true);
-        p.setTextSize(textSize);
-
-        float textWidth = p.measureText(text);
-        c.drawText(text, button.centerX()-(textWidth/2), button.centerY()+(textSize/2), p);
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     private void setTouchListener(final Canvas c, final RecyclerView recyclerView, final RecyclerView.ViewHolder viewHolder, final float dX, final float dY, final int actionState, final boolean isCurrentlyActive) {
         recyclerView.setOnTouchListener(new View.OnTouchListener() {
@@ -130,7 +95,6 @@ public class SwipeController extends Callback {
                         setItemsClickable(recyclerView, false);
                     }
                 }
-
                 return false;
             }
         });
@@ -170,8 +134,10 @@ public class SwipeController extends Callback {
                             return false;
                         }
                     });
+
                     setItemsClickable(recyclerView, true);
                     swipeBack = false;
+
                     if (buttonsActions != null && buttonInstance != null && buttonInstance.contains(event.getX(), event.getY())) {
                         if (buttonShowedState == ButtonsState.LEFT_VISIBLE) {
                             buttonsActions.onLeftClicked(viewHolder.getAdapterPosition());
@@ -182,7 +148,6 @@ public class SwipeController extends Callback {
                     }
                     buttonShowedState = ButtonsState.GONE;
                     currentItemViewHolder = null;
-
                 }
                 return false;
             }
@@ -196,8 +161,53 @@ public class SwipeController extends Callback {
         }
     }
 
-    @Override
-    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+
+    private void drawButtons(Canvas c, RecyclerView.ViewHolder viewHolder) {
+        float buttonWidthWithoutPadding = buttonWidth;
+        float corners = 0;
+
+        View itemView = viewHolder.itemView;
+        Paint p = new Paint();
+
+//        RectF leftButton = new RectF(itemView.getLeft(), itemView.getTop(), itemView.getLeft() + buttonWidthWithoutPadding, itemView.getBottom());
+//        p.setColor(Color.LTGRAY);
+//        c.drawRoundRect(leftButton, corners, corners, p);
+//        drawText("Altro", c, leftButton, p);
+        RectF rightButton = new RectF(itemView.getRight() - buttonWidthWithoutPadding, itemView.getTop() + 10, itemView.getRight(), itemView.getBottom()-10);
+        p.setColor(Color.LTGRAY);
+        c.drawRoundRect(rightButton, corners, corners, p);
+        drawText("Altro", c, rightButton, p);
+
+        buttonInstance = null;
+
+        switch (buttonShowedState) {
+            case GONE:
+                break;
+            case LEFT_VISIBLE:
+                break;
+            case RIGHT_VISIBLE:
+                buttonInstance = rightButton;
+                break;
+        }
+    }
+
+    private void drawText(String text, Canvas c, RectF button, Paint p) {
+        float textSize = 60;
+        p.setColor(Color.WHITE);
+        p.setAntiAlias(true);
+        p.setTextSize(textSize);
+
+        float textWidth = p.measureText("...");
+        c.drawText("...", button.centerX()-(textWidth/2), button.centerY()+(textSize/2) - 20, p);
+
+
+        textSize = 30;
+        p.setColor(Color.WHITE);
+        p.setAntiAlias(true);
+        p.setTextSize(textSize);
+
+        textWidth = p.measureText(text);
+        c.drawText(text, button.centerX()-(textWidth/2), button.centerY()+(textSize/2) +50, p);
     }
 
     public void onDraw(Canvas c) {

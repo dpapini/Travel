@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:paddingStart="5dp"
+    android:paddingEnd="5dp"
+    android:paddingBottom="20dp">
+
+    <LinearLayout
+        android:id="@+id/llOption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/llAbort"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/rounded_corner"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnIncasso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:text="@string/btn_incasso" />
+
+        <Button
+            android:id="@+id/btnVariazione"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:text="@string/btn_variazione_esito" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llAbort"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/rounded_corner"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnAnnulla"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@android:color/transparent"
+            android:paddingTop="10dp"
+            android:text="@string/btn_annulla"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</RelativeLayout>

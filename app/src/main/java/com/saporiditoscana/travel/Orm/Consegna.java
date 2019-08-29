@@ -689,31 +689,7 @@ public class Consegna  implements Serializable {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
             Terminale terminale = new Terminale(context);
-//            String url = terminale.getWebServerUrlErgon() + "InsertConsegna";
             String url = terminale.getWebServerUrlErgon() + "InsertConsegnaEsito";
-
-//            JsonObject json = new JsonObject();
-//            json.addProperty("AnnoReg", consegna.getAnnoReg());
-//            json.addProperty("NrReg", consegna.getNrReg());
-//            json.addProperty("IdEsitoConsegna", consegna.getIdEsitoConsegna());
-//            json.addProperty("Testo", consegna.getTesto());
-//            json.addProperty("TsValidita", consegna.getTsValidita());
-//            json.addProperty("IdDevice", terminale.getId());
-//            json.addProperty("Commento", consegna.getCommento());
-//
-//            json.addProperty("FileName", consegna.getFileName());
-//            json.addProperty("FileType", consegna.getFileType());
-//            json.addProperty("FileBase64", consegna.getFileBase64());
-
-//            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
-//            urlBuilder.addQueryParameter("EditJson", json.toString());
-//            url = urlBuilder.build().toString();
-//
-//            OkHttpClient client = new OkHttpClient();
-//            Request request = new Request.Builder()
-//                    .url(url)
-//                    .build();
-//            Response responses = null;
 
             Gson gson = new Gson();
 
@@ -753,9 +729,59 @@ public class Consegna  implements Serializable {
                 }
             });
         } catch (Exception e) {
-//            Log.e(TAG, e.getMessage());
+            Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
         }
     }
+
+    public static void UpdateConsegna(final Consegna consegna, final Context context) {
+        try {
+            final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+
+            Terminale terminale = new Terminale(context);
+            String url = terminale.getWebServerUrlErgon() + "UpdateConsegnaEsitoPost";
+
+            Gson gson = new Gson();
+
+            consegna.setIdDevice(terminale.getId()); //recupero l'id del device
+
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(RequestBody.create(mediaType, gson.toJson(consegna)))
+                    .build();
+            Response responses = null;
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    e.printStackTrace();
+                }
+
+                @Override
+                public void onResponse(Call call, final Response response) throws IOException {
+                    try {
+                        String jsonData = response.body().string();
+
+                        Gson gson = new Gson();
+                        final Result result = gson.fromJson(jsonData, Result.class);
+
+                        if (result.Error != null) {
+                            Logger.e(TAG, result.getError().toString());
+                            throw new Exception("Aggiornamento fallito");
+                        }
+
+                        BoolUpdateStato(consegna, context);
+
+                    } catch (Exception e) {
+                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
+        }
+    }
+
 
     @Override
     public String toString() {

@@ -39,8 +39,8 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
 
         public ConsegnaViewHolder (View itemView){
             super(itemView);
-            cv = (CardView) itemView.findViewById(R.id.cv);
-            checkCliente = (TextView) itemView.findViewById(R.id.checkCliente);
+            cv = itemView.findViewById(R.id.cv);
+            checkCliente = itemView.findViewById(R.id.checkCliente);
             cliente =  itemView.findViewById(R.id.cliente);
             localita = itemView.findViewById(R.id.localita);
             indirizzo = itemView.findViewById(R.id.indirizzo);
@@ -66,6 +66,7 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
             if (item.getIdEsitoConsegna() != 0) {
                 checkCliente.getBackground().setTint(Color.GREEN);
                 checkCliente.setVisibility(View.VISIBLE);
+                itemView.setTag("swipe_enable");//se già valorizzato esito abilito lo swipe per altre opzioni
             }
 
             pagamentoContanti.setVisibility(View.GONE);
@@ -74,11 +75,8 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
                 pagamentoContanti.setVisibility(View.VISIBLE);
             }
 
-            itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (item.getIdEsitoConsegna() == 0)  listener.onItemClick(item);
-                }
+            itemView.setOnClickListener(v -> {
+                if (item.getIdEsitoConsegna() == 0)  listener.onItemClick(item);
             });
         }
     }
@@ -98,14 +96,17 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
     }
 
     public void Update(List<Consegna> consegnas){
-//        this.consegnas.clear();
-//        this.notifyDataSetChanged();
-//        this.consegnas.addAll(consegnas);
-//        this.notifyDataSetChanged();
-
         this.consegnas=consegnas;
         this.notifyDataSetChanged();
     }
+
+    public Consegna getItemByPosition(int position){
+        return this.consegnas.get(position);
+    }
+
+    /**
+     * cerca l'item per anno e numero di registrazione
+    */
 
     public int findItem(String key){
         int annoReg = 2000;

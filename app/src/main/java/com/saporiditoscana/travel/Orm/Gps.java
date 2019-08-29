@@ -214,6 +214,7 @@ public class Gps {
             json.addProperty("Latitudine", gps.getLatitudine());
             json.addProperty("Longitudine",gps.getLongitudine());
             json.addProperty("TsValidita", gps.getTsValidita());
+            json.addProperty("IdDevice", terminale.getId());//id del device
 
             HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
             urlBuilder.addQueryParameter("EditJson", json.toString());
@@ -254,4 +255,6 @@ public class Gps {
 //            Log.e(TAG, e.getMessage());
         }
     }
+
+
 }
