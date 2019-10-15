@@ -58,7 +58,8 @@
                 android:value=".SettingActivity" />
         </activity>
         <activity android:name=".CameraCaptured" />
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

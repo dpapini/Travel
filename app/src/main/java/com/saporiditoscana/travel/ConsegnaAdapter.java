@@ -1,6 +1,7 @@
 package com.saporiditoscana.travel;
 
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -96,7 +97,9 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
     }
 
     public void Update(List<Consegna> consegnas){
-        this.consegnas=consegnas;
+        this.consegnas.clear();
+        this.consegnas.addAll(consegnas);
+//        this.consegnas = consegnas;
         this.notifyDataSetChanged();
     }
 
@@ -139,8 +142,4 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
         return  consegnas.size();
     }
 
-    @Override
-    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
-        super.onAttachedToRecyclerView(recyclerView);
-    }
 }

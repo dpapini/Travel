@@ -12,10 +12,13 @@ import com.saporiditoscana.travel.Result;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import android.content.BroadcastReceiver;
 
+
+import androidx.annotation.NonNull;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -136,9 +139,11 @@ public class Mail extends BroadcastReceiver {
 
     public void SendMail() {
         try {
+//            Logger.d(TAG, "Inizio SendMail");
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
             Terminale terminale = new Terminale(context);
+//            Logger.d(TAG, "Terminale id: " + terminale.getId());
             String url = terminale.getApiServerUrl() + "mail/SendMail";
 
             Gson gson = new Gson();
@@ -160,17 +165,26 @@ public class Mail extends BroadcastReceiver {
                     .build();
             Response responses = null;
 
+//            Logger.d(TAG, ": " + m.toString());
+
+//            for (int i = 0; i < m.AttachCollection.size(); i++) {
+//                Logger.d(TAG, "allegato: " +  m.getAttachCollection().get(i).toString());
+//            }
+
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
                     Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
                     sendMessageToUI(context, "Invio mail non riuscito.", -1);
+//                    Logger.d(TAG, "Fine SendMail");
                 }
 
                 @Override
                 public void onResponse(Call call, final Response response) throws IOException {
                     try {
                         String jsonData = response.body().string();
+
+//                        Logger.d(TAG, "onResponse: " + jsonData);
 
                         Gson gson = new Gson();
                         final Result result = gson.fromJson(jsonData, Result.class);
@@ -181,18 +195,35 @@ public class Mail extends BroadcastReceiver {
                             sendMessageToUI(context, "Invio mail non riuscito.", -1);
                         }
 
-
+//                        Logger.d(TAG, "Fine SendMail");
                     } catch (Exception e) {
-                        Logger.e(TAG, e.getMessage());
+                        Logger.e(TAG, "Exception onResponse: " + e.getMessage());
+//                        Logger.d(TAG, "Fine SendMail");
                     }
                 }
             });
         } catch (Exception e) {
-            Logger.e(TAG, e.getMessage());
+            Logger.e(TAG, "Exception on SendMail:" + e.getMessage());
+//            Logger.d(TAG, "Fine SendMail");
         }
     }
 
     private  void sendMessageToUI(Context context, String messagge, Integer esito) {
         completed.callback(messagge, esito);
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", Mail.class.getSimpleName() + "[", "]")
+                .add("context=" + context)
+                .add("AddressForm='" + AddressForm + "'")
+                .add("AddressTo='" + AddressTo + "'")
+                .add("AddressCc='" + AddressCc + "'")
+                .add("AddressCcn='" + AddressCcn + "'")
+                .add("Subject='" + Subject + "'")
+                .add("Message='" + Message + "'")
+                .add("TerminaleId=" + TerminaleId)
+                .add("completed=" + completed)
+                .toString();
     }
 }

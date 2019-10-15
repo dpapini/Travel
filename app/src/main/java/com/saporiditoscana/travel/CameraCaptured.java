@@ -37,6 +37,7 @@ public class CameraCaptured extends AppCompatActivity {
     private String consegna;
     private int esito;
     private String commento;
+    private boolean isNew;
 
     String currentPhotoPath;
 
@@ -53,6 +54,7 @@ public class CameraCaptured extends AppCompatActivity {
         esito = sourceIntent.getIntExtra("esito",-1);// getIntent().getExtras().get("esito").toString();
 //        Logger.d(TAG, String.valueOf(esito));
         commento = sourceIntent.getStringExtra("commento");
+        isNew = sourceIntent.getBooleanExtra("isNew",false);
 //        Logger.d(TAG, commento);
     }
 
@@ -101,6 +103,7 @@ public class CameraCaptured extends AppCompatActivity {
                     resultIntent.putExtra("esito", esito);//le ripasso alla pari
                     resultIntent.putExtra("consegna", consegna);//le ripasso alla pari
                     resultIntent.putExtra("commento", commento);
+                    resultIntent.putExtra("isNew", isNew);
                     resultIntent.putExtra("filename", file.getName());
                     setResult(Activity.RESULT_OK, resultIntent);
                 }

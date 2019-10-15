@@ -2,29 +2,30 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item android:id="@+id/settings"
-        android:icon="@drawable/ic_setting"
-        android:title="Impostazioni"
+    <item
+        android:id="@+id/settings"
         android:enabled="true"
-        app:showAsAction="always"/>
+        android:icon="@drawable/ic_setting"
+        android:title="@string/impostazioni"
+        app:showAsAction="ifRoom" />
 
     <item android:id="@+id/download"
         android:icon="@drawable/ic_file_download"
-        android:title="Inizializza"
+        android:title="@string/inizializza"
         android:enabled="true"
         app:showAsAction="always"/>
 
     <item android:id="@+id/travel"
         android:icon="@drawable/ic_travel"
-        android:title="Viaggio"
+        android:title="@string/viaggio"
         android:enabled="true"
-        app:showAsAction="always"/>
+        app:showAsAction="never"/>
 
     <item android:id="@+id/upload"
         android:icon="@drawable/ic_file_upload"
-        android:title="Scarica"
+        android:title="@string/scarica"
         android:enabled="true"
-        app:showAsAction="always"/>
+        app:showAsAction="never"/>
 
 
 </menu>

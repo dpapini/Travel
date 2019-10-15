@@ -42,4 +42,9 @@
     <string name="message_mail_consegna">Consegna effettuata con esito:</string>
     <string name="message_mail_variazione">Variazione esito consegna :</string>
     <string name="pick_image_intent_text">Seleziona una foto</string>
+    <string name="prova">prova</string>
+    <string name="descrizione_giro">Descrizione Giro</string>
+    <string name="inizializza">Scarica</string>
+    <string name="viaggio">Partenza</string>
+    <string name="scarica">Fine</string>
 </resources>

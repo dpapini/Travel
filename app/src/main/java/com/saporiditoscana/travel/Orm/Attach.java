@@ -2,6 +2,8 @@ package com.saporiditoscana.travel.Orm;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.StringJoiner;
+
 public class Attach{
     @SerializedName("FileName")
     private String FileName;
@@ -32,5 +34,14 @@ public class Attach{
 
     public void setMediaType(String mediaType) {
         MediaType = mediaType;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", Attach.class.getSimpleName() + "[", "]")
+                .add("FileName='" + FileName + "'")
+                .add("FileBase64='" + FileBase64 + "'")
+                .add("MediaType='" + MediaType + "'")
+                .toString();
     }
 }

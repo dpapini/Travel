@@ -4,14 +4,26 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
+import com.saporiditoscana.travel.Logger;
+import com.saporiditoscana.travel.Result;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.StringJoiner;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class Giro {
     private static final String TAG = "Giro";
@@ -172,6 +184,59 @@ public class Giro {
             result=false;
         }
         return  result;
+    }
+
+    public static void UpdateEndGiro(final Giro giro, final Context context) {
+        try {
+            Logger.d(TAG, "UpdateEndGiro");
+            final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+
+            Terminale terminale = new Terminale(context);
+            String url = terminale.getWebServerUrlErgon() + "EndGiroConsegna";
+
+            JsonObject json = new JsonObject();
+            json.addProperty("CdDep", giro.getCdDep());
+            json.addProperty("CdGiro", giro.getCdGiro());
+            json.addProperty("DtConsegna", giro.getDtConsegnaddMMyyyy());
+            json.addProperty("TsEnd", Gps.GetCurrentTimeStamp());
+
+            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
+            urlBuilder.addQueryParameter("EditJson", json.toString());
+            url = urlBuilder.build().toString();
+
+
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+            Response responses = null;
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    Logger.d(TAG, "onFailure: " + e.getLocalizedMessage());
+                }
+
+                @Override
+                public void onResponse(Call call, final Response response) {
+                    try {
+                        String jsonData = response.body().string();
+
+                        Gson gson = new Gson();
+                        final Result result = gson.fromJson(jsonData, Result.class);
+
+                        if (result.Error != null)
+                            Logger.e(TAG, result.getError().toString());
+
+                    } catch (Exception e) {
+                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+        }
     }
 
     @Override

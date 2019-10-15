@@ -20,6 +20,7 @@ import android.widget.TextView;
 import com.google.android.gms.tasks.Tasks;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.Orm.Consegna;
+import com.saporiditoscana.travel.Orm.Giro;
 import com.saporiditoscana.travel.Orm.Gps;
 import com.saporiditoscana.travel.Orm.Terminale;
 
@@ -33,6 +34,7 @@ public class UploadActivity extends AppCompatActivity {
     private int resultGps;
     private int resultConsegna;
     private Terminale terminale;
+    private Giro giro;
     ContentLoadingProgressBar pbGps;
     TextView txGps;
     ContentLoadingProgressBar pbConsegne;
@@ -46,6 +48,7 @@ public class UploadActivity extends AppCompatActivity {
         setContentView(R.layout.activity_upload);
 
         terminale = new Terminale(this);
+        giro = new Giro(this);
         pbGps = findViewById(R.id.pb_gps);
         txGps = findViewById(R.id.tx_gps);
         pbConsegne = findViewById(R.id.pb_consegna);
@@ -195,7 +198,7 @@ public class UploadActivity extends AppCompatActivity {
             super.onPreExecute();
             pbConsegne.show();
             if (hasConnection()) {
-                consegnaList = Consegna.GetLista(getBaseContext());
+                consegnaList = Consegna.GetListaToUpload(getBaseContext());
             }
             txConsegne.setText("Consegne - inizio download ");
 
@@ -223,6 +226,7 @@ public class UploadActivity extends AppCompatActivity {
                         return Activity.RESULT_CANCELED;
                     }
                 }
+                Giro.UpdateEndGiro(giro, getBaseContext());
                 return Activity.RESULT_OK;
             }else return Activity.RESULT_CANCELED;
         }

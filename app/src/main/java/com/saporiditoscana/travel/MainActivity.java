@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -25,6 +26,7 @@ import android.os.Parcelable;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.InputType;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -39,6 +41,7 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.material.bottomappbar.BottomAppBar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
@@ -75,6 +78,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -118,7 +122,7 @@ public class MainActivity  extends AppCompatActivity {
 
     final Calendar myCalendar=Calendar.getInstance();
     FloatingActionButton fab;
-    BottomAppBar bab;
+    BottomNavigationView bab;
 
     private STATO stato = STATO.CONFIGURED;
 
@@ -163,6 +167,8 @@ public class MainActivity  extends AppCompatActivity {
         }
     }
 
+
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -181,10 +187,8 @@ public class MainActivity  extends AppCompatActivity {
                 dtConsegna.setEnabled(true);
                 break;
             case UPLOAD_TRAVEL:
-//                initializeViewGiro();
                 break;
             case UPLOAD_DETAIL_TRAVEL:
-//                initializeViewGiro();
                 if (Consegna.Check(MainActivity.this)) {
                     Step.Update(STATO.TRAVEL_COMPLETED.id, MainActivity.this);
                     this.stato = STATO.TRAVEL_COMPLETED;
@@ -192,10 +196,8 @@ public class MainActivity  extends AppCompatActivity {
                 break;
             case TRAVEL_COMPLETED:
                 //ho caricato tutte le bolle
-//                initializeViewGiro();
                 break;
             case UPLOAD_START_TRAVEL:
-//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 chekTracking();
                 if (consegnaAdapter != null && consegnaAdapter.isCompleted()) {
@@ -204,17 +206,11 @@ public class MainActivity  extends AppCompatActivity {
                 }
                 break;
             case UPLOAD_END_TRAVEL:
-//                initializeViewGiro();
-                dtConsegna.setEnabled(false);
-                chekTracking();
-                break;
             case UPLOAD_DOWNLOAD_TRAVEL:
-//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 chekTracking();
                 break;
             case GET_PICTURE_CAMERA:
-//                initializeViewGiro();
                 dtConsegna.setEnabled(false);
                 Step.Update(STATO.UPLOAD_START_TRAVEL.id,MainActivity.this);
             default:
@@ -225,7 +221,6 @@ public class MainActivity  extends AppCompatActivity {
 
     private void chekTracking() {
         if (!mTracking) {
-//            startService(new Intent(getBaseContext(), LocationMonitoringService.class));
             startService(new Intent(getBaseContext(), LocationService.class));
             mTracking = true;
         }
@@ -365,17 +360,14 @@ public class MainActivity  extends AppCompatActivity {
 
         String positiveText = getString(R.string.btn_label_refresh);
         builder.setPositiveButton(positiveText,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        //Block the Application Execution until user grants the permissions
-                        if (startStep2(dialog)) {
-                            //Now make sure about location permission.
-                            if (!checkPermissions()) {
-                                requestPermissions();
-                            }
-
+                (dialog, which) -> {
+                    //Block the Application Execution until user grants the permissions
+                    if (startStep2(dialog)) {
+                        //Now make sure about location permission.
+                        if (!checkPermissions()) {
+                            requestPermissions();
                         }
+
                     }
                 });
 
@@ -404,84 +396,77 @@ public class MainActivity  extends AppCompatActivity {
                 permissionState7 == PackageManager.PERMISSION_GRANTED;
     }
 
+
     private void populateRecyclerView() {
+        rv = findViewById(R.id.rv);
+
+        rv.setHasFixedSize(true);
+        rv.setNestedScrollingEnabled(true);
+        rv.getRecycledViewPool().setMaxRecycledViews(0, 0);
+
+        final SwipeController swipeController = new SwipeController(new SwipeControllerActions() {
+            @Override
+            public void onLeftClicked(int position) {
+                //TODO
+            }
+
+            @Override
+            public void onRightClicked(int position) {
+                //TODO
+                clientOtherDialog = new Dialog(MainActivity.this);
+                clientOtherDialog.setContentView(R.layout.dialog_altro);
+                clientOtherDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                final Button btnAnnulla = clientOtherDialog.findViewById(R.id.btnAnnulla);
+                final Button btnIncasso = clientOtherDialog.findViewById(R.id.btnIncasso);
+                final Button btnVariazione = clientOtherDialog.findViewById(R.id.btnVariazione);
+
+                final Consegna item = consegnaAdapter.getItemByPosition(position);
+
+                btnAnnulla.setOnClickListener(v -> clientOtherDialog.onBackPressed());
+                btnVariazione.setOnClickListener(v -> {
+                    settingContexClientDialog(item);
+                });
+
+                btnIncasso.setOnClickListener(v->{
+                    Intent intent = new Intent(MainActivity.this, CameraCaptured.class);
+                    intent.putExtra("consegna", item.getCliente());
+                    intent.putExtra("isNew", true);
+                    startActivityForResult(intent, INCASSO_REQUEST);
+                });
+
+                clientOtherDialog.show();
+            }
+        });
+
+        ItemTouchHelper itemTouchhelper = new ItemTouchHelper(swipeController);
+        itemTouchhelper.attachToRecyclerView(rv);
+
+        rv.addItemDecoration(new RecyclerView.ItemDecoration() {
+            @Override
+            public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
+                swipeController.onDraw(c);
+            }
+        });
+
         List<Consegna> consegnas = Consegna.GetLista(MainActivity.this);
-        if (consegnas.size() > 0) {
-            rv = findViewById(R.id.rv);
-
+//        if (consegnas.size() > 0) {
             if (rv != null) {
-                rv.setNestedScrollingEnabled(true);
-                consegnaAdapter = new ConsegnaAdapter(consegnas, new ConsegnaAdapter.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(final Consegna item) {
-                        if (GetStatApp().id != STATO.UPLOAD_START_TRAVEL.id) return;
+                consegnaAdapter = new ConsegnaAdapter(consegnas, item -> {
+                    if (GetStatApp().id != STATO.UPLOAD_START_TRAVEL.id) return;
 
-                        settingContexClientDialog(item);
-                    }
+                    settingContexClientDialog(item);
                 });
 
                 rv.setAdapter(consegnaAdapter);
-                final SwipeController swipeController = new SwipeController(new SwipeControllerActions() {
-                    @Override
-                    public void onLeftClicked(int position) {
-                        //TODO
-                    }
 
-                    @Override
-                    public void onRightClicked(int position) {
-                        //TODO
-                        clientOtherDialog = new Dialog(MainActivity.this);
-                        clientOtherDialog.setContentView(R.layout.dialog_altro);
-                        clientOtherDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-                        final Button btnAnnulla = clientOtherDialog.findViewById(R.id.btnAnnulla);
-                        final Button btnIncasso = clientOtherDialog.findViewById(R.id.btnIncasso);
-                        final Button btnVariazione = clientOtherDialog.findViewById(R.id.btnVariazione);
-
-                        Gson gson = new Gson();
-                        final Consegna item = consegnaAdapter.getItemByPosition(position);
-
-                        btnAnnulla.setOnClickListener(v -> clientOtherDialog.onBackPressed());
-                        btnVariazione.setOnClickListener(v -> {
-//
-//                            Intent intentGallery = new Intent(Intent.ACTION_PICK);
-//                            intentGallery.setType("image/*"); // Sets the type as image/*. This ensures only components of type image are selected
-//                            String[] mimeTypes = {"image/jpeg", "image/png"}; //We pass an extra array with the accepted mime types. This will ensure only components with these MIME types as targeted.
-//                            intentGallery.putExtra(Intent.EXTRA_MIME_TYPES,mimeTypes);
-//                            intentGallery.putExtra("consegna", gson.toJson(item));
-//
-//                            startActivityForResult(intentGallery,GALLERY_REQUEST_CODE);
-//
-                            settingContexClientDialog(item);
-                        });
-
-                        btnIncasso.setOnClickListener(v->{
-                            Intent intent = new Intent(MainActivity.this, CameraCaptured.class);
-                            intent.putExtra("consegna", item.getCliente());
-                            startActivityForResult(intent, INCASSO_REQUEST);
-                        });
-
-                        clientOtherDialog.show();
-                    }
-                });
-
-                ItemTouchHelper itemTouchhelper = new ItemTouchHelper(swipeController);
-                itemTouchhelper.attachToRecyclerView(rv);
-
-                rv.addItemDecoration(new RecyclerView.ItemDecoration() {
-                    @Override
-                    public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-                        swipeController.onDraw(c);
-                    }
-                });
             }
-        }
+//        }
     }
 
     private void settingContexClientDialog(Consegna item) {
-        int position = consegnaAdapter.findItem(item.getAnnoReg() - 2000 + String.valueOf(item.getNrReg()));
-        final boolean isNew =  rv.getLayoutManager().findViewByPosition(position).getTag() == null;
-
+//        int position = consegnaAdapter.findItem(item.getAnnoReg() - 2000 + String.valueOf(item.getNrReg()));
+        final boolean isNew = item.getIdEsitoConsegna()==0; //rv.getLayoutManager().findViewByPosition(position).getTag() == null;
 
         clientDialog = new Dialog(MainActivity.this);
         clientDialog.setContentView(R.layout.dialog_cliente);
@@ -512,14 +497,11 @@ public class MainActivity  extends AppCompatActivity {
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle(R.string.alterTitle);
                 builder.setMessage(R.string.messaggio_conferma_cliente_lbl);
-                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            esitoConsegna = 5;
+                builder.setNegativeButton(R.string.no, (dialog, which) -> {
+                    esitoConsegna = 5;
 
-                            startIntentCamera(item, esitoConsegna, "", isNew);
-                        }
-                    }
+                    startIntentCamera(item, esitoConsegna, "", isNew);
+                }
                 );
 
                 builder.setPositiveButton(R.string.si, (dialog, which) -> {
@@ -528,30 +510,27 @@ public class MainActivity  extends AppCompatActivity {
                     Mail mail = new Mail(getBaseContext(), (message, result) -> {
                         final String _message = message;
                         final Integer _result = result;
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                lpb.hide();
-                                if (_result == 0) {
-                                    item.setFlInviato("S");
-                                    item.setIdEsitoConsegna(esitoConsegna);
-                                    item.setCommento("");
-                                    Consegna.Update(item, getBaseContext());
+                        mHandler.post(() -> {
+                            lpb.hide();
+                            Toast.makeText(MainActivity.this, _message, Toast.LENGTH_LONG).show();
+                            if (_result == 0) {
+                                item.setFlInviato("S");
+                                item.setIdEsitoConsegna(esitoConsegna);
+                                item.setCommento("");
+                                Consegna.Update(item, getBaseContext());
 
-                                    if (isNew)
-                                        Consegna.InsertConsegna(item, getBaseContext());//scrivo sul db del server
-                                    else Consegna.UpdateConsegna(item, getBaseContext());//scrivo sul db del server
+                                if (isNew)
+                                    Consegna.InsertConsegna(item, getBaseContext());//scrivo sul db del server
+                                else Consegna.UpdateConsegna(item, getBaseContext());//scrivo sul db del server
 
-                                    clientDialog.onBackPressed();
-                                    consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
-                                    if (consegnaAdapter.isCompleted()) {
-                                        Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
-                                        UpdateStastoView();
-                                    }
+                                clientDialog.onBackPressed();
+                                consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
+                                if (consegnaAdapter.isCompleted()) {
+                                    Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
+                                    UpdateStastoView();
                                 }
-                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
-                                Toast.makeText(getApplicationContext(), _message, Toast.LENGTH_LONG).show();
                             }
+                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
                         });
                     });
                     mail.setAddressTo(item.getMailAge() + item.getMailVettore());
@@ -717,7 +696,7 @@ public class MainActivity  extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main2);
 
         db=new DbManager(this);
         mHandler = new Handler(Looper.getMainLooper());
@@ -729,115 +708,125 @@ public class MainActivity  extends AppCompatActivity {
 
         bab = findViewById(R.id.bottomAppBar);
         //setting menu in bar bottom
-        bab.replaceMenu(R.menu.menu_navigation);
+//        bab.replaceMenu(R.menu.menu_navigation);
 
-        bab.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(final MenuItem item) {
-                lpb.show();
-                switch (item.getItemId()){
-                    case R.id.settings:
-                        Toast.makeText(MainActivity.this,"Setting", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(MainActivity.this, SettingActivity.class));
-                        lpb.hide();
-                        break;
-                    case R.id.download:
-                        //deve scaricare i dati dal piano di carico
-                        if (stato.id <= STATO.UPLOAD_TRAVEL.id) {
-                            Terminale terminale = new Terminale(MainActivity.this);
-                            if (!(terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() &&
-                                    terminale.getWebServer() != null && !terminale.getWebServer().isEmpty())) {
+        bab.setOnNavigationItemSelectedListener(menuItem -> {
+            lpb.show();
+            switch (menuItem.getItemId()) {
+                case R.id.settings:
+                    Toast.makeText(MainActivity.this,"Setting", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(MainActivity.this, SettingActivity.class));
+                    lpb.hide();
+                    break;
+                case R.id.download:
+                    //deve scaricare i dati dal piano di carico
+                    if (stato.id <= STATO.UPLOAD_TRAVEL.id) {
+                        Terminale terminale = new Terminale(MainActivity.this);
+                        if (!(terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() &&
+                                terminale.getWebServer() != null && !terminale.getWebServer().isEmpty())) {
 
-                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                builder.setTitle(R.string.alterTitle);
-                                builder.setMessage(R.string.erroreAcquisizionePianodicarico);
-                                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        startActivity(new Intent(MainActivity.this, SettingActivity.class));
-                                    }
-                                });
-                                lpb.hide();
-                                builder.show();
-                                break;
-                            }
-                            Step.Update(STATO.CONFIGURED.id, MainActivity.this);
-                            UpdateStastoView();
-
-                            if (!dtConsegna.getText().toString().isEmpty())
-                                getJsonObjectAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetGiroConsegna));
-                            else {
-                                dtConsegna.setError("data consegna obbligatoria");
-                                dtConsegna.setText("");
-                                lpb.hide();
-                            }
-                        }else lpb.hide();
-                        break;
-                    case R.id.upload:
-                        //start activity to upload data
-                        if (stato.id == STATO.UPLOAD_END_TRAVEL.id) {
-                            Intent intent = new Intent(getBaseContext(), UploadActivity.class);
-                            startActivityForResult(intent, UPLOAD_REQUEST);
-                        }
-                        break;
-                    case R.id.travel:
-                        item.setEnabled(false);
-                        if (!mTracking && (Consegna.Check(MainActivity.this))) {
-                            //invio mail di inizio giro
-                            Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
-                                @Override
-                                public void callback(String message, Integer result) {
-                                    final String _message = message;
-                                    final Integer _result = result;
-
-                                    try{lpb.hide();}catch (Exception e){}
-
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            lpb.hide();
-                                            item.setEnabled(true);
-
-                                            if (_result ==0 ) {
-                                                //Start location sharing service
-                                                startService(new Intent(getBaseContext(), LocationService.class));
-                                                mTracking = true;
-                                                Step.Update(STATO.UPLOAD_START_TRAVEL.id, MainActivity.this);
-                                                UpdateStastoView();
-                                                UpdateStartGiro();
-                                            }
-
-                                            Toast.makeText(MainActivity.this, _message, Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                                }
-                            });
-                            mail.setAddressTo(Consegna.GetMailCapoArea(getBaseContext()));
-                            mail.setAddressCc(Consegna.GetMailAgente(getBaseContext()) + Consegna.GetMailVettore(getBaseContext()) + "logistica@saporiditoscana.com;");
-                            mail.setAddressCcn("agiannetti@saporiditoscana.com");
-//                            mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
-                            mail.setSubject("Giro " + giro.getDsGiro() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
-                            mail.setMessage("");
-                            mail.SendMail();
-                        }else{
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                             builder.setTitle(R.string.alterTitle);
-                            builder.setMessage(R.string.errorePartenzaGiro);
+                            builder.setMessage(R.string.erroreAcquisizionePianodicarico);
                             builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
+                                    startActivity(new Intent(MainActivity.this, SettingActivity.class));
                                 }
                             });
                             lpb.hide();
                             builder.show();
-                            item.setEnabled(true);
+                            break;
                         }
-                        break;
-                }
-                return true;
+                        Step.Update(STATO.CONFIGURED.id, MainActivity.this);
+                        UpdateStastoView();
+
+                        if (!dtConsegna.getText().toString().isEmpty())
+                            getJsonObjectAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetGiroConsegna));
+                        else {
+                            dtConsegna.setError("data consegna obbligatoria");
+                            dtConsegna.setText("");
+                            lpb.hide();
+                        }
+                    }else lpb.hide();
+                    break;
+                case R.id.upload:
+                    //start activity to upload data
+                    lpb.hide();
+                    if (stato.id == STATO.UPLOAD_END_TRAVEL.id) {
+                        Intent intent = new Intent(getBaseContext(), UploadActivity.class);
+                        startActivityForResult(intent, UPLOAD_REQUEST);
+                    }
+                    break;
+                case R.id.travel:
+                    menuItem.setEnabled(false);
+                    if (!mTracking && (Consegna.Check(MainActivity.this))) {
+                        //invio mail di inizio giro
+                        Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
+                            @Override
+                            public void callback(String message, Integer result) {
+                                final String _message = message;
+                                final Integer _result = result;
+
+                                try{lpb.hide();}catch (Exception e){}
+
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        lpb.hide();
+                                        menuItem.setEnabled(true);
+
+                                        if (_result ==0 ) {
+                                            //Start location sharing service
+                                            startService(new Intent(getBaseContext(), LocationService.class));
+                                            mTracking = true;
+                                            Step.Update(STATO.UPLOAD_START_TRAVEL.id, MainActivity.this);
+                                            UpdateStastoView();
+                                            UpdateStartGiro();
+                                        }
+
+                                        Toast.makeText(MainActivity.this, _message, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+                        });
+                        mail.setAddressTo(Consegna.GetMailCapoArea(getBaseContext()));
+                        mail.setAddressCc(Consegna.GetMailAgente(getBaseContext()) + Consegna.GetMailVettore(getBaseContext()) + "logistica@saporiditoscana.com;");
+                        mail.setAddressCcn("agiannetti@saporiditoscana.com");
+//                            mail.setSubject("Giro " + ((TextView)findViewById(R.id.txGiro)).getText() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
+                        mail.setSubject("Giro " + giro.getDsGiro() + " - partenza [" + Gps.GetCurrentTimeStamp()+"]");
+                        mail.setMessage("");
+                        mail.SendMail();
+                    }else{
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        builder.setTitle(R.string.alterTitle);
+                        builder.setMessage(R.string.errorePartenzaGiro);
+                        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                        lpb.hide();
+                        builder.show();
+                        menuItem.setEnabled(true);
+                    }
+                    break;
             }
+            return true ;
         });
+
+
+//        bab.setOnNavigationItemSelectedListener(menuItem ->  );
+//            @Override
+//            public boolean onMenuItemClick(final MenuItem item) {
+//                lpb.show();
+//                switch (item.getItemId()){
+//
+//                }
+//                return true;
+//            }
+//        });
 
 
         fab = findViewById(R.id.fab);
@@ -1075,10 +1064,11 @@ public class MainActivity  extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         try {
             // Check which request we're responding to
 //            Logger.d(TAG+  " onActivityResult" , "requestCode: " + requestCode);
-            switch(requestCode){
+            switch (requestCode) {
                 case CAMERA_REQUEST:
                     if (resultCode == Activity.RESULT_OK) {
                         switch (GetStatApp()) { //leggo lo stato dell'applicazione
@@ -1089,66 +1079,68 @@ public class MainActivity  extends AppCompatActivity {
                                 Gson gson = new Gson();
 
                                 final String c = data.getExtras().get("consegna").toString();
-                                final Consegna consegna = gson.fromJson(c,Consegna.class);
+                                final Consegna consegna = gson.fromJson(c, Consegna.class);
                                 final String comment = data.getExtras().get("commento").toString();
                                 final String fileName = data.getStringExtra("filename");
                                 final boolean isNew = data.getBooleanExtra("isNew", false);
+//                                Logger.d(TAG,  " isNew1 : " + isNew );
 
-                                final int esito =  data.getIntExtra("esito",-1);// Integer.parseInt(data.getExtras().get("esito").toString());
-                                final String image64 =  data.getExtras().get("image64").toString();
+                                final int esito = data.getIntExtra("esito", -1);// Integer.parseInt(data.getExtras().get("esito").toString());
+                                final String image64 = data.getExtras().get("image64").toString();
 
                                 //send mail
-                                Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
-                                    @Override
-                                    public void callback(String message, Integer result) {
+                                Mail mail = new Mail(getBaseContext(), (message, result) -> {
                                     final String _messagio = message;
                                     final Integer _result = result;
                                     mHandler.post(new Runnable() {
                                         @Override
                                         public void run() {
-                                        lpb.hide();
-                                        if (_result == 0) {
-                                            //update tabella consegna
-                                            consegna.setIdEsitoConsegna(esito);
-                                            consegna.setFlInviato("S");
-                                            consegna.setCommento(comment.trim());
-                                            consegna.setFileName(fileName);
-                                            consegna.setFileType("image/jpg");
-                                            consegna.setFileBase64(image64);
-                                            Consegna.Update(consegna, getBaseContext());
-                                            if (isNew)
-                                                Consegna.InsertConsegna(consegna, getBaseContext());
-                                            else Consegna.UpdateConsegna(consegna, getBaseContext());
+                                            lpb.hide();
+                                            Toast.makeText(MainActivity.this, _messagio, Toast.LENGTH_LONG).show();
+                                            if (_result == 0) {
+                                                //update tabella consegna
+                                                consegna.setIdEsitoConsegna(esito);
+                                                consegna.setFlInviato("S");
+                                                consegna.setCommento(comment.trim());
+                                                consegna.setFileName(fileName);
+                                                consegna.setFileType("image/jpg");
+                                                consegna.setFileBase64(image64);
+                                                Consegna.Update(consegna, getBaseContext());
 
-                                            final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
-                                            final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
-                                            final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
-                                            final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
-                                            clientDialog.onBackPressed();
-                                            consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
-                                            if (consegnaAdapter.isCompleted()) {
-                                                Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
-                                                UpdateStastoView();
+                                                if (isNew)
+                                                    Consegna.InsertConsegna(consegna, getBaseContext());
+                                                else
+                                                    Consegna.UpdateConsegna(consegna, getBaseContext());
+
+                                                final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
+                                                final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
+                                                final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
+                                                final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+
+                                                clientDialog.onBackPressed();
+                                                consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
+                                                if (consegnaAdapter.isCompleted()) {
+                                                    Step.Update(STATO.UPLOAD_END_TRAVEL.id, MainActivity.this);
+                                                    UpdateStastoView();
+                                                }
+                                                AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
+                                                Log.e(TAG, "Shown:" + rv.isShown());
                                             }
-                                            AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
-                                        }
-                                        Toast.makeText(getApplicationContext(), _messagio, Toast.LENGTH_LONG).show();
                                         }
                                     });
-                                    }
                                 });
-                                mail.setAddressTo(consegna.getMailCapoArea() + consegna.getMailAge()+ consegna.getMailVettore());
-                                if (esito != 5 ) mail.setAddressCc("problemaconsegna@saporiditoscana.com;");
-                                mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + consegna.getCliente()  + "[" + Gps.GetCurrentTimeStamp()+"]");
+                                mail.setAddressTo(consegna.getMailCapoArea() + consegna.getMailAge() + consegna.getMailVettore());
+                                if (esito != 5)
+                                    mail.setAddressCc("problemaconsegna@saporiditoscana.com;");
+                                mail.setSubject("Giro " + giro.getDsGiro().trim() + " - Cliente " + consegna.getCliente() + "[" + Gps.GetCurrentTimeStamp() + "]");
 
                                 if (isNew)
                                     mail.setMessage(getString(R.string.message_mail_consegna) + EsitoConsegna.GetTesto(getBaseContext(), esito));
-                                else mail.setMessage(getString(R.string.message_mail_variazione) + EsitoConsegna.GetTesto(getBaseContext(), esito));
+                                else
+                                    mail.setMessage(getString(R.string.message_mail_variazione) + EsitoConsegna.GetTesto(getBaseContext(), esito));
 
                                 if (esito == 4) {
-                                    mail.setMessage("Consegna effettuata con esito: " + EsitoConsegna.GetTesto(getBaseContext(), esito) +
-                                            System.lineSeparator() +
-                                            " commento: " + comment);
+                                    mail.setMessage(mail.getMessage().trim() + System.lineSeparator() + " commento: " + comment);
                                 }
 
                                 Attach attach = new Attach();
@@ -1159,14 +1151,14 @@ public class MainActivity  extends AppCompatActivity {
                                 mail.SendMail();
                             break;
                         }
-                    }else {
+                    } else {
                         final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
                         final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
                         final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
                         final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
                         AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, true);
                     }
-                break;
+                    break;
                 case SCAN_REQUEST:
 //                    Logger.d(TAG +"["+ SCAN_REQUEST + "]", "resultcode:" + resultCode);
                     if (resultCode == RESULT_OK) {
@@ -1175,113 +1167,119 @@ public class MainActivity  extends AppCompatActivity {
                         // Do something with the contact here (bigger example below)
                         switch (GetStatApp()) {
                             case UPLOAD_TRAVEL: //leggo il qrcode per caricare tutta la distinta e passo allo stato successivo
-                                List<DbQuery> dbQueries = new ArrayList<DbQuery>();
-                                if (qrCodeText != null && !qrCodeText.toString().isEmpty()) {
+                                try {
+                                    List<DbQuery> dbQueries = new ArrayList<DbQuery>();
+                                    if (qrCodeText != null && !qrCodeText.toString().isEmpty()) {
 
-                                    Logger.d(TAG, "QrCode load successful");
+                                        Logger.d(TAG, "QrCode load successful");
 
-                                    Terminale terminale = new Terminale(MainActivity.this);
-                                    String[] strings = {};
+                                        Terminale terminale = new Terminale(MainActivity.this);
+                                        String[] strings = {};
 
-                                    //controllo se la distinta ha il paragrafo del giro
-                                    String[] dati = qrCodeText.split("\\§");
-                                    if (dati.length > 1){
-                                        String[] s = dati[0].split("\\#");
-                                        String sGiro = s[0];
-                                        SimpleDateFormat f =new SimpleDateFormat("yyyyMMdd",Locale.ITALIAN);
+                                        //controllo se la distinta ha il paragrafo del giro
+                                        String[] dati = qrCodeText.split("\\§");
+                                        if (dati.length > 1) {
+                                            String[] s = dati[0].split("\\#");
+                                            String sGiro = s[0];
+                                            SimpleDateFormat f = new SimpleDateFormat("yyyyMMdd", Locale.ITALIAN);
 
-                                        if (giro== null) giro = new Giro(getBaseContext());
+                                            if (giro == null) giro = new Giro(getBaseContext());
 
-                                        Date dtconsegna =  f.parse(s[1]);
-                                        Date d = f.parse(giro.getDtConsegnayyyyMMdd());
+                                            Date dtconsegna = f.parse(s[1]);
+                                            Date d = f.parse(giro.getDtConsegnayyyyMMdd());
 
-                                        if (!(giro.getCdGiro().equals(sGiro) && dtconsegna.compareTo(d) == 0 && terminale.getIdConducente().equals(s[2]))){
-                                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                                            builder.setTitle(R.string.alterTitle);
-                                            builder.setMessage(R.string.messaggio_giro_errato);
-                                            builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {
-                                                    dialog.dismiss();
-                                                    return;
-                                                }
-                                            });
-                                            AlertDialog alert = builder.create();
-                                            alert.show();
-                                        }else
-                                            strings = dati[1].split("\\#");
+                                            if (!(giro.getCdGiro().equals(sGiro) && dtconsegna.compareTo(d) == 0 && terminale.getIdConducente().equals(s[2]))) {
+                                                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                                builder.setTitle(R.string.alterTitle);
+                                                builder.setMessage(R.string.messaggio_giro_errato);
+                                                builder.setPositiveButton(R.string.si, new DialogInterface.OnClickListener() {
+                                                    @Override
+                                                    public void onClick(DialogInterface dialog, int which) {
+                                                        dialog.dismiss();
+                                                        return;
+                                                    }
+                                                });
+                                                AlertDialog alert = builder.create();
+                                                alert.show();
+                                            } else
+                                                strings = dati[1].split("\\#");
 
-                                    }else{
-                                        //qrcode vecchio non c'è il riferimento al Giro
-                                        strings = dati[0].split("\\#");
+                                        } else {
+                                            //qrcode vecchio non c'è il riferimento al Giro
+                                            strings = dati[0].split("\\#");
+                                        }
+
+                                        if (strings.length <= 0)
+                                            strings = qrCodeText.split("\\#");
+
+                                        for (int i = 0; i < strings.length; i++) {
+                                            int annoReg = 2000;
+                                            int nrReg = -1;
+                                            annoReg += Integer.parseInt(strings[i].substring(0, 2));
+                                            nrReg = Integer.parseInt(strings[i].substring(2));
+
+                                            dbQueries.add(Consegna.Insert(annoReg, nrReg));
+
+                                        }
+                                        if (Consegna.Insert(dbQueries, MainActivity.this)) {
+                                            Step.Update(STATO.UPLOAD_DETAIL_TRAVEL.id, MainActivity.this);
+                                            UpdateStastoView();
+                                        }
+                                        //carico in automatico tutti i dati delle consegne
+                                        for (int i = 0; i < strings.length; i++) {
+                                            getTravelConsegnaAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetTravelConsegna), strings[i]);
+                                        }
                                     }
-
-                                    if (strings.length<=0)
-                                        strings = qrCodeText.split("\\#");
-
-                                    for (int i = 0; i < strings.length; i++) {
-                                        int annoReg = 2000;
-                                        int nrReg = -1;
-                                        annoReg += Integer.parseInt(strings[i].substring(0, 2));
-                                        nrReg = Integer.parseInt(strings[i].substring(2));
-
-                                        dbQueries.add(Consegna.Insert(annoReg, nrReg));
-
-                                    }
-                                    if (Consegna.Insert(dbQueries, MainActivity.this)) {
-                                        Step.Update(STATO.UPLOAD_DETAIL_TRAVEL.id, MainActivity.this);
-                                        UpdateStastoView();
-                                    }
-                                    //carico in automatico tutti i dati delle consegne
-                                    for (int i = 0; i < strings.length; i++) {
-                                        getTravelConsegnaAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetTravelConsegna), strings[i]);
-                                    }
+                                } catch (Exception e) {
+                                    Logger.d(TAG, "one error occurred on UPLOAD_TRAVEL: " + e.getLocalizedMessage());
                                 }
-                            break;
+                                break;
                             case UPLOAD_DETAIL_TRAVEL: //leggo il barcode delle singole bolle per confermare gli scarichi
                                 Terminale terminale = new Terminale(MainActivity.this);
                                 if (qrCodeText != null && !qrCodeText.toString().isEmpty()) {
                                     getTravelConsegnaAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetTravelConsegna), qrCodeText);
                                 }
-                            break;
+                                break;
                             case UPLOAD_START_TRAVEL: //leggo il barcode delle bolle per dare esito della consegna
                                 if (qrCodeText != null && !qrCodeText.toString().isEmpty()) {
                                     int position = consegnaAdapter.findItem(qrCodeText);
                                     rv.findViewHolderForAdapterPosition(position).itemView.performClick();
                                 }
-                            break;
+                                break;
                         }
                     }
-                break;
+                    break;
                 case UPLOAD_REQUEST:
-                    if (resultCode == Activity.RESULT_OK)
-                    {
+                    if (resultCode == Activity.RESULT_OK) {
                         mTracking = false;
                         stopService(new Intent(MainActivity.this, LocationService.class));
 
-                        Toast.makeText(MainActivity.this,"Upload", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Upload", Toast.LENGTH_SHORT).show();
                     }
-                break;
+                    break;
                 case GALLERY_REQUEST:
-                    if (resultCode == Activity.RESULT_OK){
+                    if (resultCode == Activity.RESULT_OK) {
                         if (data.getData() == null) return;
 
                         Gson gson = new Gson();
 
                         final String c = data.getExtras().get("consegna").toString();
-                        final Consegna item = gson.fromJson(c,Consegna.class);
+                        final Consegna item = gson.fromJson(c, Consegna.class);
 
                         Uri selectedImage = data.getData();
                         imageView.setImageURI(selectedImage);
 
                         settingContexClientDialog(item);
                     }
-                break;
+                    break;
                 case INCASSO_REQUEST:
-                    if (resultCode == Activity.RESULT_OK){
+                    if (resultCode == Activity.RESULT_OK) {
                         if (data == null) return;
 
                         final String c = data.getExtras().get("consegna").toString();
+                        final String fileName = data.getStringExtra("filename");
+                        final String image64 = data.getExtras().get("image64").toString();
+
 
                         Mail mail = new Mail(getBaseContext(), new Mail.Completed() {
                             @Override
@@ -1294,20 +1292,27 @@ public class MainActivity  extends AppCompatActivity {
                                         lpb.hide();
                                         if (_result == 0) clientOtherDialog.onBackPressed();
 
-                                        Toast.makeText(getApplicationContext(), _messagio, Toast.LENGTH_LONG).show();
+                                        Toast.makeText(MainActivity.this, _messagio, Toast.LENGTH_LONG).show();
                                     }
                                 });
                             }
                         });
                         mail.setAddressTo("creditogr@saporiditoscana.com");
-                        mail.setSubject("Incasso - Cliente " + c  + "[" + Gps.GetCurrentTimeStamp()+"]");
+                        mail.setSubject("Incasso - Cliente " + c + "[" + Gps.GetCurrentTimeStamp() + "]");
                         mail.setMessage("Copia incasso");
+
+                        Attach attach = new Attach();
+                        attach.setFileName("foto.jpg");
+                        attach.setFileBase64(image64);
+                        attach.setMediaType("image/jpg");
+                        mail.AddAttach(attach);
+
                         mail.SendMail();
                     }
-                break;
+                    break;
             }
-        }catch (Exception e){
-            Logger.e(TAG,"one error occured on onActivityResult: " + e.getMessage(), e);
+        } catch (Exception e) {
+            Logger.e(TAG, "one error occured on onActivityResult: " + e.getMessage(), e);
         }
     }
 
@@ -1344,7 +1349,7 @@ public class MainActivity  extends AppCompatActivity {
             case R.id.action_save:
                 EditText idTerminale = findViewById(R.id.txTerminale);
 
-                Toast.makeText(this,"Saved" + idTerminale.getText().toString().trim(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this,"Saved" + idTerminale.getText().toString().trim(), Toast.LENGTH_SHORT).show();
                 return true;
             default:return super.onOptionsItemSelected(item);
         }
@@ -1570,4 +1575,5 @@ public class MainActivity  extends AppCompatActivity {
 //        mTracking = false;
         super.onStop();
     }
+
 }

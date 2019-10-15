@@ -144,6 +144,20 @@ public class Consegna  implements Serializable {
         return  c;
     }
 
+    public static Cursor GetDatiToUpload(Context context){
+        Cursor c;
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("SELECT * FROM t_consegna WHERE cod_cli > 0 AND fl_uploaded <> 'S' ORDER BY sequenza ");
+
+            DbManager dbManager = new DbManager(context);
+            c = dbManager.GetCursor(sb.toString(), null);
+        }catch (Exception e){
+//            Log.e(TAG, e.getMessage());
+            c= null;
+        }
+        return  c;
+    }
 
     private Cursor getConsegna(int annoReg, int nrReg)
     {
@@ -556,6 +570,49 @@ public class Consegna  implements Serializable {
         return result;
     }
 
+    public static List<Consegna> GetListaToUpload (Context context)
+    {
+        List<Consegna> consegnas = new ArrayList<Consegna>();
+        Cursor c = Consegna.GetDatiToUpload(context);
+        try {
+            if (c!= null) {
+                while (c.moveToNext()) {
+                    Consegna consegna = new Consegna();
+                    consegna.setAnnoReg(c.getInt(c.getColumnIndex("anno_reg")));
+                    consegna.setNrReg(c.getInt(c.getColumnIndex("nr_reg")));
+                    consegna.setCdCli(c.getInt(c.getColumnIndex("cod_cli")));
+                    consegna.setRagioneSociale(c.getString(c.getColumnIndex("rag_soc")));
+                    consegna.setIndirizzo(c.getString(c.getColumnIndex("indirizzo")));
+                    consegna.setLocalita(c.getString(c.getColumnIndex("localita")));
+                    consegna.setCdAge(c.getString(c.getColumnIndex("cod_age")));
+                    consegna.setCdCapoArea(c.getString(c.getColumnIndex("cod_capo_area")));
+                    consegna.setMailAge(c.getString(c.getColumnIndex("mail_agente")));
+                    consegna.setMailCapoArea(c.getString(c.getColumnIndex("mail_capo_area")));
+                    consegna.setIdEsitoConsegna(c.getInt(c.getColumnIndex("id_esito_consegna")));
+                    consegna.setTesto(c.getString(c.getColumnIndex("testo")));
+                    consegna.setTsValidita(c.getString(c.getColumnIndex("ts_validita")));
+                    consegna.setFlInviato(c.getString(c.getColumnIndex("fl_inviato")));
+                    consegna.setSequenza(c.getString(c.getColumnIndex("sequenza")));
+                    consegna.setTipoDocumento(c.getString(c.getColumnIndex("tipo_documento")));
+                    consegna.setNumeroDocumento(c.getInt(c.getColumnIndex("numero_documento")));
+                    consegna.setPagamentoContanti(c.getInt(c.getColumnIndex("pagamento_contanti"))==1);
+                    consegna.setMailVettore(c.getString(c.getColumnIndex("mail_vettore")));
+                    consegna.setFlUploaded(c.getString(c.getColumnIndex("fl_uploaded")));
+                    consegna.setCommento(c.getString(c.getColumnIndex("commento")));
+                    consegna.setFileName(c.getString(c.getColumnIndex("file_name")));
+                    consegna.setFileType(c.getString(c.getColumnIndex("file_type")));
+                    consegna.setFileBase64(c.getString(c.getColumnIndex("file_base64")));
+
+                    consegnas.add(consegna);
+                }
+            }
+        }catch (Exception e)
+        {
+            Logger.e(TAG, "one error occurred:" + e.getLocalizedMessage());
+
+        }
+        return consegnas;
+    }
     public static List<Consegna> GetLista (Context context)
     {
         List<Consegna> consegnas = new ArrayList<Consegna>();
@@ -688,12 +745,17 @@ public class Consegna  implements Serializable {
         try {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
+//            Logger.d(TAG, "InsertConsegna");
             Terminale terminale = new Terminale(context);
             String url = terminale.getWebServerUrlErgon() + "InsertConsegnaEsito";
+
+//            Logger.d(TAG, "terminale Id: " + terminale.getId());
 
             Gson gson = new Gson();
 
             consegna.setIdDevice(terminale.getId()); //recupero l'id del device
+
+//            Logger.d(TAG, ": " + consegna.toString());
 
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -705,7 +767,7 @@ public class Consegna  implements Serializable {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
+                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
                 }
 
                 @Override
@@ -737,6 +799,8 @@ public class Consegna  implements Serializable {
         try {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
+            Logger.d(TAG, "UpdateConsegna");
+
             Terminale terminale = new Terminale(context);
             String url = terminale.getWebServerUrlErgon() + "UpdateConsegnaEsitoPost";
 
@@ -754,7 +818,7 @@ public class Consegna  implements Serializable {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
+                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
                 }
 
                 @Override
@@ -806,6 +870,11 @@ public class Consegna  implements Serializable {
                 .add("PagamentoContanti=" + PagamentoContanti)
                 .add("MailVettore='" + MailVettore + "'")
                 .add("FlUploaded='" + FlUploaded + "'")
+                .add("Commento='" + Commento + "'")
+                .add("IdDevice=" + IdDevice)
+                .add("FileName='" + FileName + "'")
+                .add("FileType='" + FileType + "'")
+                .add("FileBase64='" + FileBase64 + "'")
                 .toString();
     }
 }
