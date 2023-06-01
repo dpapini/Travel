@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
     android:paddingStart="5dp"
     android:paddingEnd="5dp"
     android:paddingBottom="20dp">
@@ -17,26 +18,18 @@
         android:orientation="vertical">
 
         <Button
-            android:id="@+id/btnIncasso"
+            android:id="@+id/btnCamera"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
-            android:text="@string/btn_incasso" />
+            android:text="@string/camera" />
 
         <Button
-            android:id="@+id/btnComunicazioni"
+            android:id="@+id/btnGallery"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
-            android:text="@string/btn_comunicazioni" />
-
-        <Button
-            android:id="@+id/btnVariazione"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            android:text="@string/btn_variazione_esito" />
-
+            android:text="@string/Gallery" />
     </LinearLayout>
 
     <LinearLayout
@@ -48,10 +41,11 @@
         android:orientation="vertical">
 
         <Button
-            android:id="@+id/btnAnnulla"
+            android:id="@+id/btnAnnullaPhoto"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:layout_marginTop="10dp"
+            android:layout_weight="1"
             android:background="@android:color/transparent"
             android:paddingTop="10dp"
             android:text="@string/btn_annulla"

@@ -1,7 +1,10 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
+
+import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -83,12 +86,18 @@ public class Consegna  implements Serializable {
     private String FileBase64;
 
 
+    public interface Completed{
+        void callback(String message, Integer result);
+    }
+
+
     public Consegna(){}
 
     public Consegna(Context context){
         this.context = context;
     }
 
+    @SuppressLint("Range")
     public Consegna(int AnnoReg, int NrReg, Context context){
         this.context = context;
         Cursor c = getConsegna(AnnoReg,NrReg);
@@ -132,11 +141,8 @@ public class Consegna  implements Serializable {
     public static Cursor GetDati(Context context){
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_consegna WHERE cod_cli > 0 ORDER BY sequenza ");
-
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT * FROM t_consegna WHERE cod_cli > 0 ORDER BY sequenza ", null);
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
             c= null;
@@ -147,11 +153,9 @@ public class Consegna  implements Serializable {
     public static Cursor GetDatiToUpload(Context context){
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_consegna WHERE cod_cli > 0 AND fl_uploaded <> 'S' ORDER BY sequenza ");
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT * FROM t_consegna WHERE cod_cli > 0 AND fl_uploaded <> 'S' ORDER BY sequenza ", null);
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
             c= null;
@@ -159,21 +163,20 @@ public class Consegna  implements Serializable {
         return  c;
     }
 
-    private Cursor getConsegna(int annoReg, int nrReg)
+    private Cursor getConsegna(int ignoredAnnoReg, int ignoredNrReg)
     {
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_consegna ");
-            sb.append(" WHERE anno_reg = ? " );
-            sb.append("   AND nr_reg = ? " );
+            String sb = "SELECT * FROM t_consegna " +
+                    " WHERE anno_reg = ? " +
+                    "   AND nr_reg = ? ";
 
             String[] parameters = new String[]{
                     String.valueOf(this.AnnoReg),
                     String.valueOf(this.NrReg)};
 
             DbManager dbManager = new DbManager(this.context);
-            c = dbManager.GetCursor(sb.toString(), parameters);
+            c = dbManager.GetCursor(sb, parameters);
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
             c= null;
@@ -202,7 +205,7 @@ public class Consegna  implements Serializable {
     }
 
     public String getCliente(){
-        return String.valueOf(CdCli) + " - " + RagioneSociale.trim();
+        return CdCli + " - " + RagioneSociale.trim();
     }
 
     public void setCdCli(int cdCli) {
@@ -388,7 +391,7 @@ public class Consegna  implements Serializable {
     }
 
     public static boolean Check(Context context){
-        Boolean result = false;
+        boolean result = false;
         try{
             DbManager dbManager;
             dbManager = new DbManager(context);
@@ -415,18 +418,55 @@ public class Consegna  implements Serializable {
         catch (Exception e)
         {
 //            Log.e(TAG, e.getMessage());
-            result = false;
         }
         return result;
     }
 
 
-    public static Boolean Update(Consegna consegna, Context context){
-        Boolean result = false;
+    public static boolean Update(Consegna consegna, Context context, String TsValidita){
+        boolean result;
         try{
-            StringBuilder sb;
 
+            int rows = getResultExecuteUpdate(consegna, context, TsValidita);
+
+            if (rows==0) result = false;
+            else {
+                result = true;
+                consegna.setTsValidita(TsValidita);
+            }
+        }
+        catch (Exception e)
+        {
+            result = false;
+            Logger.e(TAG,e.getLocalizedMessage(), e);
+        }
+        return result;
+    }
+
+    public static Boolean Update(Consegna consegna, Context context){
+        boolean result;
+        try{
             String tsCurrent = Gps.GetCurrentTimeStamp2JsonPrimitive(); //Gps.GetCurrentTimeStamp();
+
+            int rows = getResultExecuteUpdate(consegna, context, tsCurrent);
+
+            if (rows==0) result = false;
+            else {
+                result = true;
+                consegna.setTsValidita(tsCurrent);
+            }
+        }
+        catch (Exception e)
+        {
+            result = false;
+            Logger.e(TAG,e.getLocalizedMessage(), e);
+        }
+        return result;
+    }
+
+    private static int getResultExecuteUpdate(Consegna consegna, Context context, String tsCurrent) {
+        try {
+            StringBuilder sb;
             sb = new StringBuilder();
             sb.append("UPDATE t_consegna SET cod_cli = ? ");
             sb.append("     , rag_soc = ? ");
@@ -455,7 +495,7 @@ public class Consegna  implements Serializable {
             sb.append("   AND nr_reg = ? ");
 
             String[] parameters = new String[]{
-                      String.valueOf(consegna.getCdCli())
+                    String.valueOf(consegna.getCdCli())
                     , String.valueOf(consegna.getRagioneSociale())
                     , String.valueOf(consegna.getIndirizzo())
                     , String.valueOf(consegna.getLocalita())
@@ -470,7 +510,7 @@ public class Consegna  implements Serializable {
                     , String.valueOf(tsCurrent)
                     , String.valueOf(consegna.getFlInviato())
                     , String.valueOf(consegna.getTesto())
-                    , String.valueOf(consegna.getPagamentoContanti()?1:0)
+                    , String.valueOf(consegna.getPagamentoContanti() ? 1 : 0)
                     , String.valueOf(consegna.getMailVettore())
                     , String.valueOf(consegna.getFlUploaded())
                     , String.valueOf(consegna.getCommento())
@@ -483,24 +523,17 @@ public class Consegna  implements Serializable {
 
             DbManager dbManager;
             dbManager = new DbManager(context);
-            int rows = dbManager.ExecuteSql(sb.toString(),parameters);
-
-            if (rows==0) result = false;
-            else {
-                result = true;
-                consegna.setTsValidita(tsCurrent);
-            }
+            return dbManager.ExecuteSql(sb.toString(), parameters);
         }
         catch (Exception e)
         {
-            result = false;
             Logger.e(TAG,e.getLocalizedMessage(), e);
+            return 0;
         }
-        return result;
     }
 
     public static boolean BoolUpdateStato(Consegna consegna, Context context){
-        Boolean result = false;
+        boolean result;
         try{
             StringBuilder sb;
 
@@ -518,8 +551,7 @@ public class Consegna  implements Serializable {
             dbManager = new DbManager(context);
             dbManager.ExecuteSql(sb.toString(),parameters);
             int rows = dbManager.ExecuteSql(sb.toString(),parameters);
-            if (rows==0) result = false;
-            else result = true;
+//            result = rows != 0;
 
             result = true;
         }
@@ -532,7 +564,7 @@ public class Consegna  implements Serializable {
     }
 
     public static Boolean Delete(Context context){
-        Boolean result = false;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -553,7 +585,7 @@ public class Consegna  implements Serializable {
     }
 
     public static Boolean Insert(List<DbQuery> lsDbQueries, Context context) {
-        Boolean result;
+        boolean result;
         try{
 
             DbManager dbManager;
@@ -570,9 +602,10 @@ public class Consegna  implements Serializable {
         return result;
     }
 
+    @SuppressLint("Range")
     public static List<Consegna> GetListaToUpload (Context context)
     {
-        List<Consegna> consegnas = new ArrayList<Consegna>();
+        List<Consegna> consegnas = new ArrayList<>();
         Cursor c = Consegna.GetDatiToUpload(context);
         try {
             if (c!= null) {
@@ -613,9 +646,10 @@ public class Consegna  implements Serializable {
         }
         return consegnas;
     }
+    @SuppressLint("Range")
     public static List<Consegna> GetLista (Context context)
     {
-        List<Consegna> consegnas = new ArrayList<Consegna>();
+        List<Consegna> consegnas = new ArrayList<>();
         Cursor c = Consegna.GetDati(context);
         try {
             if (c!= null) {
@@ -661,25 +695,23 @@ public class Consegna  implements Serializable {
      *
      * Restituisce una stringa contenente tutti gli indirizzi mail dei capi area conivolti
      */
+    @SuppressLint("Range")
     public static String GetMailCapoArea(Context context)
     {
         StringBuilder result = new StringBuilder();
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT DISTINCT  mail_capo_area FROM t_consegna ");
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT DISTINCT  mail_capo_area FROM t_consegna ", null);
 
             if (c!= null){
                 while (c.moveToNext()){
-                    result.append(c.getString(c.getColumnIndex("mail_capo_area"))+';');
+                    result.append(c.getString(c.getColumnIndex("mail_capo_area"))).append(';');
                 }
             }
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
-            c= null;
         }
         return result.toString();
     }
@@ -688,16 +720,15 @@ public class Consegna  implements Serializable {
      *
      * Restituisce una stringa contenente tutti gli indirizzi mail dei capi area conivolti
      */
+    @SuppressLint("Range")
     public static String GetMailVettore(Context context)
     {
         StringBuilder result = new StringBuilder();
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT DISTINCT  mail_vettore FROM t_consegna ");
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT DISTINCT  mail_vettore FROM t_consegna ", null);
 
             if (c!= null){
                 while (c.moveToNext()){
@@ -706,7 +737,6 @@ public class Consegna  implements Serializable {
             }
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
-            c= null;
         }
         return result.toString();
     }
@@ -715,25 +745,23 @@ public class Consegna  implements Serializable {
      *
      * {Restituisce una stringa contenente tutti gli indirizzi mail degli agenti conivolti}
      */
+    @SuppressLint("Range")
     public static String GetMailAgente(Context context)
     {
         StringBuilder result = new StringBuilder();
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT DISTINCT  mail_agente FROM t_consegna ");
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT DISTINCT  mail_agente FROM t_consegna ", null);
 
             if (c!= null){
                 while (c.moveToNext()){
-                    result.append(c.getString(c.getColumnIndex("mail_agente"))+';');
+                    result.append(c.getString(c.getColumnIndex("mail_agente"))).append(';');
                 }
             }
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
-            c= null;
         }
         return result.toString();
     }
@@ -741,8 +769,9 @@ public class Consegna  implements Serializable {
     /**
      Download delle consegne e chiamata al web server per aggiornamento su gestionale
     **/
-    public static void InsertConsegna(final Consegna consegna, final Context context) {
+    public static void  InsertConsegna(final Consegna consegna, final Context context, Completed completed) {
         try {
+
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
 //            Logger.d(TAG, "InsertConsegna");
@@ -766,12 +795,16 @@ public class Consegna  implements Serializable {
 
             client.newCall(request).enqueue(new Callback() {
                 @Override
-                public void onFailure(Call call, IOException e) {
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    consegna.setFlInviato("N");
+                    consegna.setFlUploaded("N");
+                    Consegna.Update(consegna,context, consegna.TsValidita);
+                    completed.callback("",-1);
                 }
 
                 @Override
-                public void onResponse(Call call, final Response response) throws IOException {
+                public void onResponse(@NonNull Call call, @NonNull final Response response) {
                     try {
                         String jsonData = response.body().string();
 
@@ -780,22 +813,35 @@ public class Consegna  implements Serializable {
 
                         if (result.Error != null) {
                             Logger.e(TAG, result.getError().toString());
-                            throw new Exception("Aggiornamento fallito");
-                        }
+                            consegna.setFlInviato("N");
+                            consegna.setFlUploaded("N");
+                            Consegna.Update(consegna,context, consegna.TsValidita);
 
-                        BoolUpdateStato(consegna, context);
+                            completed.callback("",-1);
+
+                            throw new Exception("Aggiornamento fallito");
+                        }else BoolUpdateStato(consegna, context);
+                        completed.callback("",0);
 
                     } catch (Exception e) {
                         Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                        consegna.setFlInviato("N");
+                        consegna.setFlUploaded("N");
+                        Consegna.Update(consegna,context, consegna.TsValidita);
+                        completed.callback("",-1);
                     }
                 }
             });
         } catch (Exception e) {
             Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
+            consegna.setFlInviato("N");
+            consegna.setFlUploaded("N");
+            Consegna.Update(consegna,context, consegna.TsValidita);
+            completed.callback("",-1);
         }
     }
 
-    public static void UpdateConsegna(final Consegna consegna, final Context context) {
+    public static void UpdateConsegna(final Consegna consegna, final Context context, Completed completed) {
         try {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
@@ -817,12 +863,16 @@ public class Consegna  implements Serializable {
 
             client.newCall(request).enqueue(new Callback() {
                 @Override
-                public void onFailure(Call call, IOException e) {
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    consegna.setFlInviato("N");
+                    consegna.setFlUploaded("N");
+                    Consegna.Update(consegna,context, consegna.TsValidita);
+                    completed.callback("",-1);
                 }
 
                 @Override
-                public void onResponse(Call call, final Response response) throws IOException {
+                public void onResponse(@NonNull Call call, @NonNull final Response response) {
                     try {
                         String jsonData = response.body().string();
 
@@ -831,18 +881,32 @@ public class Consegna  implements Serializable {
 
                         if (result.Error != null) {
                             Logger.e(TAG, result.getError().toString());
-                            throw new Exception("Aggiornamento fallito");
-                        }
+                            consegna.setFlInviato("N");
+                            consegna.setFlUploaded("N");
+                            Consegna.Update(consegna,context, consegna.TsValidita);
 
-                        BoolUpdateStato(consegna, context);
+                            completed.callback("",-1);
+                            throw new Exception("Aggiornamento fallito");
+                        }else BoolUpdateStato(consegna, context);
+
+                        completed.callback("",0);
 
                     } catch (Exception e) {
+                        consegna.setFlInviato("N");
+                        consegna.setFlUploaded("N");
+                        Consegna.Update(consegna,context, consegna.TsValidita);
+
+                        completed.callback("",-1);
                         Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
                     }
                 }
             });
         } catch (Exception e) {
             Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
+            consegna.setFlInviato("N");
+            consegna.setFlUploaded("N");
+            Consegna.Update(consegna,context, consegna.TsValidita);
+            completed.callback("",-1);
         }
     }
 

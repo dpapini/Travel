@@ -9,11 +9,12 @@
 
     <EditText
         android:id="@+id/dtConsegna"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="388dp"
+        android:layout_height="50dp"
         android:layout_marginStart="10dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="10dp"
+        android:height="50dp"
         android:autofillHints=""
         android:clickable="true"
         android:ems="10"
@@ -22,6 +23,7 @@
         android:inputType="none"
         app:layout_constraintBottom_toTopOf="@+id/txGiro"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.033"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
 
@@ -42,8 +44,8 @@
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv"
-        android:layout_width="0dp"
-        android:layout_height="450dp"
+        android:layout_width="408dp"
+        android:layout_height="407dp"
         android:layout_marginTop="8dp"
         android:scrollbars="none"
         android:visibility="visible"
@@ -97,8 +99,8 @@
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomAppBar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="388dp"
+        android:layout_height="75dp"
         android:layout_gravity="bottom"
         android:backgroundTint="@color/colorPrimary"
         app:itemBackground="@color/colorPrimary"
@@ -114,6 +116,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
         android:layout_marginBottom="16dp"
+        android:contentDescription="@string/camera"
         android:scaleType="center"
         android:src="@drawable/ic_camera"
         app:backgroundTint="@color/colorPrimary"

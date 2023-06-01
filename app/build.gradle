@@ -1,41 +1,66 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    signingConfigs {
+        debug {
+            storeFile file('/Users/dpapini/Documents/keystore2023')
+            storePassword 'T0rri0n320050816'
+            keyPassword 'T0rri0n320050816'
+            keyAlias 'key'
+        }
+        release {
+            storeFile file('/Users/dpapini/Documents/keystore2023')
+            storePassword 'T0rri0n320050816'
+            keyAlias 'key'
+            keyPassword 'T0rri0n320050816'
+        }
+    }
+    compileSdk 33
     defaultConfig {
         applicationId "com.saporiditoscana.travel"
         minSdkVersion 26
-        targetSdkVersion 28
+        targetSdk 33
         versionCode 1
-        versionName "1.5.2"
+        versionName '1.6.3'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
             minifyEnabled true
+            signingConfig signingConfigs.release
+        }
+        debug {
+            debuggable true
         }
     }
     compileOptions {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
+    }
+    namespace 'com.saporiditoscana.travel'
+    lint {
+        checkReleaseBuilds false
     }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    implementation 'com.google.android.material:material:1.0.0-alpha1'
+    implementation files('libs/commons-net-3.9.0.jar')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.google.android.material:material:1.6.0'
     implementation('me.dm7.barcodescanner:zxing:1.9.8') {
         exclude module: 'support-v4'
     }
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-    implementation 'com.google.code.gson:gson:2.8.5'
-    implementation 'com.squareup.okhttp3:okhttp:4.1.0'
-    implementation 'androidx.recyclerview:recyclerview:1.0.0'
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
-    implementation 'org.kie.modules:org-apache-commons-net:6.5.0.Final'
-    implementation "androidx.versionedparcelable:versionedparcelable:1.1.0"
+//    testImplementation 'junit:junit:4.12'
+//    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+//    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
+    implementation 'androidx.recyclerview:recyclerview:1.3.0'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+//    implementation 'org.kie.modules:org-apache-commons-net:6.5.0.Final'
+    implementation 'androidx.versionedparcelable:versionedparcelable:1.1.1'
+    implementation 'androidx.exifinterface:exifinterface:1.3.6'
+
 }

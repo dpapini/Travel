@@ -46,6 +46,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
+                                                <entry key="opacityPercent" value="60" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -78,9 +79,9 @@
                                   <option name="values">
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/logo.png" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Camera-icon.png" />
                                       <entry key="outputName" value="ic_logo" />
-                                      <entry key="theme" value="HOLO_DARK" />
+                                      <entry key="themeColor" value="4334e5" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -129,6 +130,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
+                                                <entry key="paddingPercent" value="-5" />
                                                 <entry key="trimmed" value="true" />
                                               </map>
                                             </option>
@@ -141,9 +143,9 @@
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
                                       <entry key="cropped" value="true" />
-                                      <entry key="iconShape" value="CIRCLE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/logo.png" />
-                                      <entry key="outputName" value="ic_logo" />
+                                      <entry key="iconShape" value="NONE" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Camera-icon.png" />
+                                      <entry key="outputName" value="ic_camera_android" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -176,11 +178,25 @@
                                           </PersistentState>
                                         </value>
                                       </entry>
+                                      <entry key="image">
+                                        <value>
+                                          <PersistentState>
+                                            <option name="values">
+                                              <map>
+                                                <entry key="color" value="000000" />
+                                                <entry key="trimmed" value="true" />
+                                              </map>
+                                            </option>
+                                          </PersistentState>
+                                        </value>
+                                      </entry>
                                     </map>
                                   </option>
                                   <option name="values">
                                     <map>
-                                      <entry key="outputName" value="pagamento_contanti" />
+                                      <entry key="assetType" value="IMAGE" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Camera-icon.png" />
+                                      <entry key="outputName" value="camera_button" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -190,7 +206,7 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputIconType" value="NOTIFICATION" />
+                            <entry key="outputIconType" value="LAUNCHER_LEGACY" />
                           </map>
                         </option>
                       </PersistentState>

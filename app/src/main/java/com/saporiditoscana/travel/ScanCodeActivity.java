@@ -1,23 +1,19 @@
 package com.saporiditoscana.travel;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import me.dm7.barcodescanner.zxing.ZXingScannerView;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Result;
 
-import java.util.List;
 
 public class ScanCodeActivity extends AppCompatActivity implements ZXingScannerView.ResultHandler{
 
-    private static final String TAG = "ScanCodeActivity";
     public static final int PERMISSION_REQUEST_CAMERA = 1;
 
     ZXingScannerView mScannerView;
@@ -37,37 +33,27 @@ public class ScanCodeActivity extends AppCompatActivity implements ZXingScannerV
 
     }
 
-//    private List<BarcodeFormat> listOf(BarcodeFormat qrCode) {
-//
-//    }
+//    private List<BarcodeFormat> listOf(BarcodeFormat qrCode) {}
 
     private boolean haveCameraPermission()
     {
-        if (Build.VERSION.SDK_INT < 23)  return true;
+        //if (Build.VERSION.SDK_INT < 23)  return true;
         return checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults)
-    {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         // This is because the dialog was cancelled when we recreated the activity.
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (permissions.length == 0 || grantResults.length == 0)
             return;
 
-        switch (requestCode)
-        {
-            case PERMISSION_REQUEST_CAMERA:
-            {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                {
-                    startCamera();
-                }
-                else
-                {
-                    finish();
-                }
+        if (requestCode == PERMISSION_REQUEST_CAMERA) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                finish();
             }
-            break;
         }
     }
 

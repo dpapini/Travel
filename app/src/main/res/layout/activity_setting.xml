@@ -16,11 +16,12 @@
 
     <EditText
         android:id="@+id/txTerminale"
-        android:layout_width="368dp"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="70dp"
         android:layout_marginEnd="8dp"
+        android:autofillHints=""
         android:ems="10"
         android:hint="@string/id_terminale"
         android:inputType="number"
@@ -31,11 +32,12 @@
 
     <EditText
         android:id="@+id/txTesto"
-        android:layout_width="368dp"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
+        android:autofillHints=""
         android:ems="10"
         android:hint="@string/testo"
         android:inputType="text"
@@ -45,30 +47,32 @@
 
     <RelativeLayout
         android:id="@+id/relativeFtp"
-        android:layout_width="368dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp"
         android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintStart_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/txTesto" >
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txTesto">
 
         <EditText
             android:id="@+id/txFtpServer"
             android:layout_width="match_parent"
-            android:layout_height="42dp"
+            android:layout_height="48dp"
+            android:autofillHints=""
             android:hint="@string/ftp_server"
             android:inputType="textUri" />
 
         <ImageButton
             android:id="@+id/update_version"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
             android:backgroundTint="@android:color/transparent"
+            android:contentDescription="@string/update"
             android:src="@drawable/ic_update" />
 
     </RelativeLayout>
@@ -88,11 +92,13 @@
 
     <EditText
         android:id="@+id/txWebServer"
-        android:layout_width="368dp"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
+        android:height="48dp"
+        android:autofillHints=""
         android:ems="10"
         android:hint="@string/web_server"
         android:inputType="textUri"
@@ -102,11 +108,12 @@
 
     <EditText
         android:id="@+id/txTarga"
-        android:layout_width="368dp"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="24dp"
         android:layout_marginEnd="8dp"
+        android:autofillHints=""
         android:ems="10"
         android:hint="@string/targa"
         android:inputType="textCapCharacters"
@@ -128,7 +135,8 @@
         android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/txTarga" />
+        app:layout_constraintTop_toBottomOf="@+id/txTarga"
+        android:autofillHints="" />
 
     <!--<Spinner-->
         <!--android:id="@+id/ddAutomezzo"-->
@@ -143,16 +151,17 @@
         <!--app:layout_constraintStart_toStartOf="parent"-->
         <!--app:layout_constraintTop_toBottomOf="@+id/txWebServer" />-->
 
-    <Spinner
-        android:id="@+id/ddConducente"
-        android:layout_width="372dp"
-        android:layout_height="42dp"
+    <AutoCompleteTextView
+        android:id="@+id/atvConducente"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="12dp"
         android:layout_marginEnd="8dp"
-        android:dropDownWidth="match_parent"
+        android:height="48dp"
+        android:hint="@string/autista"
+        android:maxLines="3"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/txTarga" />
+        app:layout_constraintTop_toTopOf="@id/txAutista" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

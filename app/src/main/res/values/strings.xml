@@ -4,7 +4,7 @@
     <string name="ftp_server">Ftp Server</string>
     <string name="web_server">Web Server</string>
     <string name="testo">Testo</string>
-    <string name="autista">Autista</string>
+    <string name="autista">Selezionare un conducente...</string>
     <string name="dtconsegna">Data Consegna</string>
     <string name="targa">Targa</string>
     <string name="impostazioni">Impostazioni</string>
@@ -13,6 +13,7 @@
     <string name="tryme">tryme</string>
     <string name="GetGiroConsegna">GetGiroConsegna</string>
     <string name="GetTravelConsegna">GetTravelConsegna</string>
+    <string name="GetTravelConsegnaCollection">GetTravelConsegnaCollection</string>
     <string name="bolleclienti">GetBolleClienti?StringSearch=</string>
     <string name="rationale_camera">This app needs access to your camera so you can take pictures.</string>
     <string name="dsgiro">Giro</string>
@@ -47,4 +48,14 @@
     <string name="inizializza">Scarica</string>
     <string name="viaggio">Partenza</string>
     <string name="scarica">Fine</string>
+    <string name="camera">Camera</string>
+    <string name="Gallery">Galleria</string>
+    <string name="SelezionaFoto">Seleziona Foto</string>
+    <string name="update">Aggiornamento della versione</string>
+    <string name="server_non_disponibile">Server non disponibile. Riprovare più tardi.</string>
+    <string name="btn_comunicazioni">Comunica  ad Amministrazione</string>
+    <string name="camerabtn">camera</string>
+    <string name="download">download</string>
+    <string name="Itinerario">Itinerario</string>
+    <string name="Consegne">Consegne</string>
 </resources>

@@ -29,42 +29,46 @@
             android:text="Indirizzo"
             android:textColor="@android:color/white"
             android:layout_marginTop="5dp"/>
+
         <TextView
             android:id="@+id/fragmentDocumento"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="10sp"
+            android:layout_gravity="start"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="5dp"
             android:text="Documento"
             android:textColor="@android:color/white"
-            android:layout_gravity="left"
-            android:layout_marginTop="5dp"
-            android:layout_marginLeft="10dp"/>
+            android:textSize="11sp" />
+
         <Button
             android:id="@+id/btnOk"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/white"
-            android:layout_marginTop="20dp"
             android:layout_gravity="start"
-            android:text="Consegnata"/>
+            android:layout_marginTop="20dp"
+            android:background="@android:color/white"
+            android:text="Consegnata" />
+
         <Button
             android:id="@+id/btnMerceMancante"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/white"
-            android:text="Merce Mancante"/>
+            android:text="Merce Mancante" />
         <Button
             android:id="@+id/btnMerceDanneggiata"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/white"
             android:text="Merce Danneggiata"/>
+
         <Button
             android:id="@+id/btnAltro"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/white"
-            android:text="Altro"/>
+            android:text="Altro" />
     </LinearLayout>
 
     <TextView

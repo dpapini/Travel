@@ -24,7 +24,7 @@
         android:layout_marginTop="15dp"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="0dp"
-        android:text="Itinerario" />
+        android:text="@string/Itinerario" />
 
     <androidx.core.widget.ContentLoadingProgressBar
         android:id="@+id/pb_gps"
@@ -47,7 +47,7 @@
         android:layout_marginTop="30dp"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="0dp"
-        android:text="Consegne" />
+        android:text="@string/Consegne" />
 
     <androidx.core.widget.ContentLoadingProgressBar
         android:id="@+id/pb_consegna"
@@ -69,4 +69,19 @@
         android:layout_centerInParent="true"
         android:layout_marginTop="60dp"
         android:text="@string/scarica_lbl" />
+
+    <TextView
+        android:id="@+id/txServer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/btn_inizio"
+        android:layout_alignParentBottom="false"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="712dp"
+        android:text="@string/server_non_disponibile"
+        android:textAlignment="center"
+        android:textSize="24sp"
+        android:visibility="invisible" />
 </RelativeLayout>

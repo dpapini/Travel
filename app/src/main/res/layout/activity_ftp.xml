@@ -24,7 +24,7 @@
         android:layout_marginTop="15dp"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="0dp"
-        android:text="Download" />
+        android:text="@string/download" />
 
     <androidx.core.widget.ContentLoadingProgressBar
         android:id="@+id/pb_download"

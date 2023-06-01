@@ -15,9 +15,12 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ListView;
 import android.widget.Spinner;
 
 import android.widget.TextView;
@@ -67,7 +70,8 @@ public class SettingActivity extends AppCompatActivity {
     private EditText txWebServer;
     private EditText txTarga;
     private EditText txAutista;
-    private Spinner ddConducente;
+//    private Spinner ddConducente;
+    private Conducente conducenteSelected;
     private Handler mHandler;
     private ImageButton updateVersion;
     private static final int FTP_DOWNLOAD =1;
@@ -143,7 +147,7 @@ public class SettingActivity extends AppCompatActivity {
         txWebServer = findViewById(R.id.txWebServer);
         txTarga = findViewById(R.id.txTarga);
         txAutista = findViewById(R.id.txAutista);
-        ddConducente = findViewById(R.id.ddConducente);
+//        ddConducente = findViewById(R.id.ddConducente);
 //        ddAutomezzo = findViewById(R.id.ddAutomezzo);
 
         if (terminale.getId() > 0 ) //terminale inizializzato valorizzo tutti i campi
@@ -176,7 +180,6 @@ public class SettingActivity extends AppCompatActivity {
 
             enableFields(false);
         }
-
 
 //        getJsonAutomezzoAsync("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdAutomezzo");
 //        Logger.i(TAG, "chiamo GetDdConducente ");
@@ -264,6 +267,9 @@ public class SettingActivity extends AppCompatActivity {
 
     private void getJsonConducenteAsync(String url) {
         try {
+            final AutoCompleteTextView atv = findViewById(R.id.atvConducente);
+            atv.setEnabled(false);
+
             lpb.show();
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -296,48 +302,66 @@ public class SettingActivity extends AppCompatActivity {
                         Type listType = new  TypeToken<List<Conducente>> (){}.getType();
                         final List<Conducente>  conducenteList = gson.fromJson(result.getData().toString(),listType);
 
-                        Conducente c = new Conducente();
-                        c.setId("-1");
-                        c.setTesto("Selezionare il conducente");
-                        conducenteList.add(0,c);
-
-//                        SettingActivity.this.runOnUiThread(new Runnable() {
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                final Spinner spinner = findViewById(R.id.ddConducente);
+
                                 ConducenteAdapter<Conducente> conducenteAdapter = new ConducenteAdapter<Conducente>(getApplicationContext(), android.R.layout.simple_spinner_item, conducenteList);
 
-                                spinner.setAdapter(conducenteAdapter);
-                                spinner.setEnabled(true);
+                                atv.setAdapter(conducenteAdapter);
+                                atv.setEnabled(true);
 
-                                if(terminale != null && terminale.getIdConducente()!= null && !terminale.getIdConducente().isEmpty() && !terminale.getIdConducente().equals("-1")) {
-                                    spinner.setSelection(conducenteAdapter.getConducenteById(terminale.getIdConducente()));
-                                    spinner.setEnabled(false);
+//                                spinner.setAdapter(conducenteAdapter);
+//                                spinner.setEnabled(true);
+
+                                if(terminale != null && terminale.getIdConducente()!= null  && !terminale.getIdConducente().isEmpty() && !terminale.getIdConducente().equals("-1")) {
+                                    conducenteSelected = conducenteAdapter.getConducente(terminale.getIdConducente());
+                                    if (conducenteSelected!=null) {
+                                        atv.setText(conducenteSelected.Testo);
+                                        atv.setEnabled(false);
+                                    }
+//                                    spinner.setSelection(conducenteAdapter.getConducenteById(terminale.getIdConducente()));
+//                                    spinner.setEnabled(false);
                                 }
 
-                                spinner.setOnItemSelectedListener(
-                                        new AdapterView.OnItemSelectedListener() {
+                                atv.setOnItemClickListener((parent, view, position, id) -> {
+                                    conducenteSelected = null;
+                                    if (position != ListView.INVALID_POSITION) {
+                                        conducenteSelected =(Conducente)parent.getItemAtPosition(position);
+                                        atv.setSelection(0);
+                                        Toast.makeText(getApplicationContext(), "Hai selezionato" + conducenteSelected.getTesto(), Toast.LENGTH_LONG).show();
+                                        // TODO Auto-generated method stub
+                                        txAutista = findViewById(R.id.txAutista);
+                                        txAutista.setText(conducenteSelected.getTesto());
 
-                                            @Override
-                                            public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+                                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                                        imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
+                                    }
+                                });
 
-                                                int position = spinner.getSelectedItemPosition();
-                                                if (position > 0) {
-                                                    Toast.makeText(getApplicationContext(), "You have selected " + conducenteList.get(position), Toast.LENGTH_LONG).show();
-                                                    // TODO Auto-generated method stub
-                                                    txAutista = findViewById(R.id.txAutista);
-                                                    txAutista.setText(conducenteList.get(position).Testo);
-                                                }
-                                            }
 
-                                            @Override
-                                            public void onNothingSelected(AdapterView<?> arg0) {
-                                                // TODO Auto-generated method stub
-
-                                            }
-                                        }
-                                );
+//                                spinner.setOnItemSelectedListener(
+//                                        new AdapterView.OnItemSelectedListener() {
+//
+//                                            @Override
+//                                            public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+//
+//                                                int position = spinner.getSelectedItemPosition();
+//                                                if (position > 0) {
+//                                                    Toast.makeText(getApplicationContext(), "You have selected " + conducenteList.get(position), Toast.LENGTH_LONG).show();
+//                                                    // TODO Auto-generated method stub
+//                                                    txAutista = findViewById(R.id.txAutista);
+//                                                    txAutista.setText(conducenteList.get(position).Testo);
+//                                                }
+//                                            }
+//
+//                                            @Override
+//                                            public void onNothingSelected(AdapterView<?> arg0) {
+//                                                // TODO Auto-generated method stub
+//
+//                                            }
+//                                        }
+//                                );
                             }
 
                         });
@@ -492,8 +516,13 @@ public class SettingActivity extends AppCompatActivity {
                             terminale.setWebServer(txWebServer.getText().toString().trim());
                             terminale.setTarga(txTarga.getText().toString().trim());
                             terminale.setConducente(txAutista.getText().toString().trim());
-                            if (ddConducente.getSelectedItem()!= null)
-                                terminale.setIdConducente(((Conducente)ddConducente.getSelectedItem()).Id);
+//                            if (ddConducente.getSelectedItem()!= null)
+//                                terminale.setIdConducente(((Conducente)ddConducente.getSelectedItem()).Id);
+
+                            if (conducenteSelected != null){
+                                terminale.setIdConducente(conducenteSelected.getId());
+                            }
+
 
                             result = terminale.UpdateTerminale(terminale);
                             break;
