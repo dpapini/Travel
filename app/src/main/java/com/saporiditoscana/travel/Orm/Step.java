@@ -1,8 +1,8 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
@@ -18,11 +18,11 @@ public class Step {
     @SerializedName("id")
     private int id = -1;
     @SerializedName("testo")
-    private String testo= new  String("");
+    private String testo= "";
     @SerializedName("flEseguito")
-    private String flEseguito = new String("N");
+    private String flEseguito = "N";
     @SerializedName("tsValidita")
-    private String tsValidita = new String("");
+    private String tsValidita = "";
 
 
     public int getId() {
@@ -67,7 +67,7 @@ public class Step {
     }
 
     public static  Boolean Insert(Step step, Context context){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -117,7 +117,7 @@ public class Step {
     }
 
     public static  Boolean Update(int Id, Context context){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -126,7 +126,7 @@ public class Step {
 
             String[] parameters = new String[]{
                     "S",
-                    String.valueOf(Step.GetCurrentTimeStamp()),
+                    Step.GetCurrentTimeStamp(),
                     String.valueOf(Id)};
 
             DbManager dbManager;
@@ -143,7 +143,7 @@ public class Step {
         return  result;
     }
     public static  Boolean Delete(Context context){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -163,16 +163,16 @@ public class Step {
         return  result;
     }
 
+    @SuppressLint("Range")
     public static Step Last(Context context){
-        Cursor c;
+        Cursor c = null;
         Step step = new Step();
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_step WHERE ts_validita = (SELECT MAX(ts_validita) FROM t_step) ");
-            sb.append("   AND fl_eseguito = 'S' ");
+            String sb = "SELECT * FROM t_step WHERE ts_validita = (SELECT MAX(ts_validita) FROM t_step) " +
+                    "   AND fl_eseguito = 'S' ";
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor(sb, null);
 
 
             if (c != null && c.getCount()>0) {
@@ -189,6 +189,10 @@ public class Step {
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
             c= null;
+        }finally {
+            if (c != null) {
+                c.close();
+            }
         }
         return step;
     }

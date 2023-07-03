@@ -8,28 +8,28 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.provider.MediaStore;
-import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.text.InputType;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +37,7 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -49,17 +50,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.saporiditoscana.travel.DbHelper.DbQuery;
 import com.saporiditoscana.travel.Orm.Attach;
 import com.saporiditoscana.travel.Orm.Consegna;
+import com.saporiditoscana.travel.Orm.ConsegnaDeserializer;
+import com.saporiditoscana.travel.Orm.ConsegnaSerializer;
 import com.saporiditoscana.travel.Orm.EsitoConsegna;
 import com.saporiditoscana.travel.Orm.Giro;
+import com.saporiditoscana.travel.Orm.GiroDeserializer;
 import com.saporiditoscana.travel.Orm.Gps;
 import com.saporiditoscana.travel.Orm.Mail;
 import com.saporiditoscana.travel.Orm.Step;
@@ -67,16 +72,17 @@ import com.saporiditoscana.travel.Orm.Terminale;
 import com.saporiditoscana.travel.Services.LocationService;
 
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import me.dm7.barcodescanner.core.BuildConfig;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
@@ -87,21 +93,20 @@ import okhttp3.Response;
 
 public class MainActivity  extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-
     public static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
     public static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
-    static final int RESULT_OK = 0;
+    static final int RESULT_OK = -1;
     private boolean mTracking = false;
     static int esitoConsegna = 0;
 
     private ActivityResultLauncher<Intent> incassoLauncher;
     private ActivityResultLauncher<Intent> cameraLauncher;
-    private ActivityResultLauncher<Intent> scanLauncher;
     private ActivityResultLauncher<Intent> uploadLauncher;
     private ConsegnaAdapter consegnaAdapter;
     public static String qrCodeText;
     @SuppressLint("StaticFieldLeak")
     public static EditText dtConsegna ;
+    public  ImageButton btnDate;
     @SuppressLint("StaticFieldLeak")
     public static TextView txGiro;
 
@@ -111,9 +116,8 @@ public class MainActivity  extends AppCompatActivity {
 
     private Handler mHandler;
     private ContentLoadingProgressBar lpb;
-
+    private boolean isStartStep1Called = false;
     final Calendar myCalendar=Calendar.getInstance();
-    FloatingActionButton fab;
     BottomNavigationView bab;
 
     private STATO stato = STATO.CONFIGURED;
@@ -163,13 +167,13 @@ public class MainActivity  extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-//        checkGPS();
-
-        startStep1();
+        // Controlla i permessi solo se non sono stati concessi
+        if (checkPermissions()) {
+            requestPermissions();
+        }
 
         GetStatApp();
-        //devo leggere la tabella step per sapere in che stato è l'applicazione
+
         UpdateStastoView();
 
         initializeViewGiro();
@@ -208,9 +212,6 @@ public class MainActivity  extends AppCompatActivity {
                 dtConsegna.setEnabled(true);
                 break;
         }
-
-//        pref = getApplicationContext().getSharedPreferences("TravelPreference", 0); // 0 - for private mode
-//        editor = pref.edit();
     }
 
     private void chekTracking() {
@@ -275,66 +276,62 @@ public class MainActivity  extends AppCompatActivity {
         return true;
     }
 
-    private boolean hasConnection(){
-        ConnectivityManager connectivityManager  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+    private boolean hasConnection() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+        if (connectivityManager != null) {
+            NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+            return networkCapabilities != null && (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+        }
+
+        return false;
     }
 
     private void requestPermissions() {
-
-        boolean shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        android.Manifest.permission.ACCESS_FINE_LOCATION);
-
-        boolean shouldProvideRationale2 = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_COARSE_LOCATION);
-
-        boolean shouldProvideRationale3 = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-        boolean shouldProvideRationale4 = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.READ_EXTERNAL_STORAGE);
-
-        boolean shouldProvideRationale5 = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.CAMERA);
-
-        boolean shouldProvideRationale6 = ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.INTERNET);
-
-
-        // Provide an additional rationale to the img_user. This would happen if the img_user denied the
-        // request previously, but didn't check the "Don't ask again" checkbox.
-        if (shouldProvideRationale || shouldProvideRationale2 || shouldProvideRationale3 ||
-                shouldProvideRationale4 || shouldProvideRationale5 || shouldProvideRationale6 )  {
-            showSnackbar(R.string.permission_rationale,
-                    android.R.string.ok, view -> {
-                        // Request permission
-                        ActivityCompat.requestPermissions(MainActivity.this,
-                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                                        Manifest.permission.CAMERA, Manifest.permission.INTERNET
-                                },
-                                REQUEST_PERMISSIONS_REQUEST_CODE);
-                    });
-        } else {
-            // Request permission. It's possible this can be auto answered if device policy
-            // sets the permission in a given state or the img_user denied the permission
-            // previously and checked "Never ask again".
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.CAMERA, Manifest.permission.INTERNET
-                    },
-                    REQUEST_PERMISSIONS_REQUEST_CODE);
+        String[] permissions = {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.CAMERA,
+                Manifest.permission.INTERNET
+        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions = addMediaPermissions(permissions);
         }
 
+        boolean shouldProvideRationale = false;
+        for (String permission : permissions) {
+            shouldProvideRationale = shouldProvideRationale || ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
+        }
+
+        if (shouldProvideRationale) {
+            String[] finalPermissions = permissions;
+            showSnackbar(R.string.permission_rationale,
+                    android.R.string.ok, view -> ActivityCompat.requestPermissions(MainActivity.this, finalPermissions, REQUEST_PERMISSIONS_REQUEST_CODE));
+        } else {
+            ActivityCompat.requestPermissions(MainActivity.this, permissions, REQUEST_PERMISSIONS_REQUEST_CODE);
+        }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.S)
+    private String[] addMediaPermissions(String[] permissions) {
+        List<String> permissionList = new ArrayList<>(Arrays.asList(permissions));
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+            permissionList.add(Manifest.permission.READ_MEDIA_IMAGES);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+            permissionList.add(Manifest.permission.READ_MEDIA_VIDEO);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissionList.add(Manifest.permission.READ_MEDIA_AUDIO);
+        }
+
+        return permissionList.toArray(new String[0]);
+    }
     private void promptInternetConnect() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle(R.string.title_alert_no_intenet);
@@ -360,25 +357,19 @@ public class MainActivity  extends AppCompatActivity {
     //Return the current state of the permissions needed.
     private boolean checkPermissions() {
         int permissionState1 = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION);
-
         int permissionState2 = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION);
-
-        int permissionState3;
-        permissionState3 =  ContextCompat.checkSelfPermission(this,Manifest.permission.INTERNET);
-
-        int permissionState4 = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int permissionState5 = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        int permissionState3 =  ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET);
         int permissionState6 = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-        int permissionState7 = ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET);
 
-        return permissionState1 != PackageManager.PERMISSION_GRANTED || permissionState2 != PackageManager.PERMISSION_GRANTED ||
-                permissionState3 != PackageManager.PERMISSION_GRANTED || permissionState4 != PackageManager.PERMISSION_GRANTED ||
-                permissionState5 != PackageManager.PERMISSION_GRANTED || permissionState6 != PackageManager.PERMISSION_GRANTED ||
-                permissionState7 != PackageManager.PERMISSION_GRANTED;
+        return permissionState1 != PackageManager.PERMISSION_GRANTED ||
+                permissionState2 != PackageManager.PERMISSION_GRANTED ||
+                permissionState3 != PackageManager.PERMISSION_GRANTED ||
+                permissionState6 != PackageManager.PERMISSION_GRANTED;
     }
 
-
     private void populateRecyclerView() {
+        Log.d(TAG, "populateRecyclerView:" );
+
         RecyclerView rv = findViewById(R.id.rv);
 
         rv.setHasFixedSize(true);
@@ -393,7 +384,7 @@ public class MainActivity  extends AppCompatActivity {
 
             @Override
             public void onRightClicked(int position) {
-                //TODO
+                Log.d(TAG, "onRightClicked:" );
                 clientOtherDialog = new Dialog(MainActivity.this);
                 clientOtherDialog.setContentView(R.layout.dialog_altro);
                 clientOtherDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -434,7 +425,8 @@ public class MainActivity  extends AppCompatActivity {
                             lpb.hide();
                             if (result == 0) clientOtherDialog.onBackPressed();
 
-                            Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                            //Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                            MainActivity.this.runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
                         }));
                         mail.setAddressTo("credito@saporiditoscana.com");
                         mail.setSubject("Comunicazione per il Cliente " + item.getCliente() + "[" + Gps.GetCurrentTimeStamp() + "]");
@@ -464,7 +456,6 @@ public class MainActivity  extends AppCompatActivity {
         });
 
         List<Consegna> consegnas = Consegna.GetLista(MainActivity.this);
-//        if (consegnas.size() > 0) {
         consegnaAdapter = new ConsegnaAdapter(consegnas, item -> {
             if (GetStatApp().id != STATO.UPLOAD_START_TRAVEL.id) return;
 
@@ -473,7 +464,6 @@ public class MainActivity  extends AppCompatActivity {
 
         rv.setAdapter(consegnaAdapter);
 
-        //        }
     }
 
     private void setupMultilineEditText(EditText editText) {
@@ -486,7 +476,7 @@ public class MainActivity  extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void settingContexClientDialog(Consegna item) {
-//        int position = consegnaAdapter.findItem(item.getAnnoReg() - 2000 + String.valueOf(item.getNrReg()));
+        Log.d(TAG, "settingContexClientDialog:" + item);
         final boolean isNew = item.getIdEsitoConsegna()==0; //rv.getLayoutManager().findViewByPosition(position).getTag() == null;
 
         clientDialog = new Dialog(MainActivity.this);
@@ -504,10 +494,10 @@ public class MainActivity  extends AppCompatActivity {
         indirizzo.setText(item.getIndirizzo());
         documento.setText(item.getTipoDocumento() + " " + item.getNumeroDocumento());
 
-        final Button btnOk = (Button) clientDialog.findViewById(R.id.btnOk);
-        final Button btnMerceMancante = (Button) clientDialog.findViewById(R.id.btnMerceMancante);
-        final Button btnMerceDanneggiata = (Button) clientDialog.findViewById(R.id.btnMerceDanneggiata);
-        final Button btnAltro = (Button) clientDialog.findViewById(R.id.btnAltro);
+        final Button btnOk = clientDialog.findViewById(R.id.btnOk);
+        final Button btnMerceMancante = clientDialog.findViewById(R.id.btnMerceMancante);
+        final Button btnMerceDanneggiata = clientDialog.findViewById(R.id.btnMerceDanneggiata);
+        final Button btnAltro = clientDialog.findViewById(R.id.btnAltro);
 
         btnOk.setOnClickListener(v -> {
             AbilitaEsiti(btnOk, btnMerceMancante, btnMerceDanneggiata, btnAltro, false);
@@ -529,7 +519,8 @@ public class MainActivity  extends AppCompatActivity {
                     final Integer _result = result;
                     mHandler.post(() -> {
                         lpb.hide();
-                        Toast.makeText(MainActivity.this, _message, Toast.LENGTH_LONG).show();
+//                        Toast.makeText(MainActivity.this, _message, Toast.LENGTH_LONG).show();
+                        MainActivity.this.runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
                         if (_result == 0) {
                             item.setFlInviato("S");
                             item.setIdEsitoConsegna(esitoConsegna);
@@ -537,9 +528,9 @@ public class MainActivity  extends AppCompatActivity {
                             Consegna.Update(item, getBaseContext());
 
                             if (isNew)
-                                Consegna.InsertConsegna(item, getBaseContext(), (message1, result1) -> {});
+                                Consegna.InsertConsegna(item, getBaseContext());
                             else
-                                Consegna.UpdateConsegna(item, getBaseContext(), (message1, result1) -> {});
+                                Consegna.UpdateConsegna(item, getBaseContext());
 
                             clientDialog.onBackPressed();
                             consegnaAdapter.Update(Consegna.GetLista(MainActivity.this));
@@ -654,8 +645,10 @@ public class MainActivity  extends AppCompatActivity {
     }
 
     private Intent getIntentCamera(Consegna item, int esitoConsegna, String s, boolean isNew) {
-//        Logger.d(TAG, "getIntentCamera");
-        Gson gson = new Gson();
+//        Log.d(TAG, "getIntentCamera");
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(Consegna.class, new ConsegnaSerializer());
+        Gson gson = gsonBuilder.create();
 
         if (!isNew) {
             item.setFileBase64("");
@@ -696,138 +689,116 @@ public class MainActivity  extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
+        if (!isStartStep1Called) {
+            startStep1();
+            isStartStep1Called = true;
+        }
+
+        InitToolBar("Home");
+
         mHandler = new Handler(Looper.getMainLooper());
 
         dtConsegna = findViewById(R.id.dtConsegna);
+        btnDate = findViewById(R.id.btnDate);
         txGiro = findViewById(R.id.txGiro);
 
         lpb = findViewById(R.id.lpb);
 
         bab = findViewById(R.id.bottomAppBar);
-        bab.setOnItemSelectedListener(item -> {
-            handleBottomAppBarItemSelected(item);
-            return true;
+        bab.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                handleBottomAppBarItemSelected(item);
+                return true;
+            }
         });
-
-        fab = findViewById(R.id.fab);
-        fab.setOnClickListener(this::handleFabClick);
-
-        InitToolBar("Home");
 
         dtConsegna.setKeyListener(null);
         dtConsegna.setOnClickListener(this::handleDateClickListener);
+        btnDate.setOnClickListener(this::handleDateClickListener);
 
         incassoLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this::handleIncassoActivityResult);
         cameraLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this::handleCameraActivityResult);
-        scanLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this::handleScanActivityResult);
         uploadLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this::handleScanActivityResult);
     }
 
+
     private void handleBottomAppBarItemSelected(MenuItem menuItem) {
+        Log.i(TAG, "handleBottomAppBarItemSelected: " + menuItem.getItemId());
+
         lpb.show();
-        switch (menuItem.getItemId()) {
-            case R.id.settings:
-                Toast.makeText(MainActivity.this, "Setting", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(MainActivity.this, SettingActivity.class));
-                lpb.hide();
-            break;
-            case R.id.download:
-                if (stato.id <= STATO.UPLOAD_TRAVEL.id) {
-                    Terminale terminale = new Terminale(MainActivity.this);
-                    if (!(terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() &&
-                            terminale.getWebServer() != null && !terminale.getWebServer().isEmpty())) {
+        int itemId = menuItem.getItemId();
 
-                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                        builder.setTitle(R.string.alterTitle);
-                        builder.setMessage(R.string.erroreAcquisizionePianodicarico);
-                        builder.setPositiveButton("OK", (dialog, which) -> startActivity(new Intent(MainActivity.this, SettingActivity.class)));
-                        lpb.hide();
-                        builder.show();
-                        break;
-                    }
-                    Step.Update(STATO.CONFIGURED.id, MainActivity.this);
-                    UpdateStastoView();
+        if (itemId == R.id.settings) {
+            MainActivity.this.runOnUiThread(() -> Toast.makeText(MainActivity.this, "Setting", Toast.LENGTH_SHORT).show());
+//            Toast.makeText(MainActivity.this, "Setting", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(MainActivity.this, SettingActivity.class));
+            lpb.hide();
+        } else if (itemId == R.id.download) {
+            if (stato.id <= STATO.UPLOAD_TRAVEL.id) {
+                Terminale terminale = new Terminale(MainActivity.this);
+                if (!(terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() &&
+                        terminale.getWebServer() != null && !terminale.getWebServer().isEmpty())) {
 
-                    if (!dtConsegna.getText().toString().isEmpty())
-                        getJsonObjectAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetGiroConsegna));
-                    else {
-                        dtConsegna.setError("data consegna obbligatoria");
-                        dtConsegna.setText("");
-                        lpb.hide();
-                    }
-                } else lpb.hide();
-            break;
-            case R.id.upload:
-                lpb.hide();
-                if (stato.id == STATO.UPLOAD_END_TRAVEL.id) {
-                    Intent intent = new Intent(getBaseContext(), UploadActivity.class);
-                    uploadLauncher.launch(intent);
-                }
-            break;
-            case R.id.travel:
-                menuItem.setEnabled(false);
-                if (!mTracking && (Consegna.Check(MainActivity.this))) {
-                    startService(new Intent(getBaseContext(), LocationService.class));
-                    mTracking = true;
-                    Step.Update(STATO.UPLOAD_START_TRAVEL.id, MainActivity.this);
-                    UpdateStastoView();
-                    UpdateStartGiro();
-
-                    lpb.hide();
-                    Toast.makeText(MainActivity.this, "Giro " + txGiro.getText() + " - partenza [" + Gps.GetCurrentTimeStamp() + "]", Toast.LENGTH_SHORT).show();
-
-                    menuItem.setEnabled(true);
-
-                } else {
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                     builder.setTitle(R.string.alterTitle);
-                    builder.setMessage(R.string.errorePartenzaGiro);
-                    builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
+                    builder.setMessage(R.string.erroreAcquisizionePianodicarico);
+                    builder.setPositiveButton("OK", (dialog, which) -> startActivity(new Intent(MainActivity.this, SettingActivity.class)));
                     lpb.hide();
                     builder.show();
-                    menuItem.setEnabled(true);
                 }
-            break;
-        }
-    }
+                Step.Update(STATO.CONFIGURED.id, MainActivity.this);
+                UpdateStastoView();
 
-    private void handleFabClick(View v) {
-        boolean abilitaCameraScanCode = false;
-        switch (GetStatApp()) {
-            case UPLOAD_TRAVEL:
-            case UPLOAD_DETAIL_TRAVEL:
-            case UPLOAD_START_TRAVEL:
-                abilitaCameraScanCode = true;
-                break;
-            default:
-                abilitaCameraScanCode = false;
+                if (!dtConsegna.getText().toString().isEmpty())
+                    getJsonObjectAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetGiroConsegna));
+                else {
+                    dtConsegna.setError("data consegna obbligatoria");
+                    dtConsegna.setText("");
+                    lpb.hide();
+                }
+            } else lpb.hide();
+        } else if (itemId == R.id.upload) {
+            lpb.hide();
+            if (stato.id == STATO.UPLOAD_END_TRAVEL.id) {
+                Intent intent = new Intent(getBaseContext(), UploadActivity.class);
+                uploadLauncher.launch(intent);
+            }
+        } else if (itemId == R.id.travel) {
+            menuItem.setEnabled(false);
+            if (!mTracking && (Consegna.Check(MainActivity.this))) {
+                startService(new Intent(getBaseContext(), LocationService.class));
+                mTracking = true;
+                Step.Update(STATO.UPLOAD_START_TRAVEL.id, MainActivity.this);
+                UpdateStastoView();
+                UpdateStartGiro();
+
+                lpb.hide();
+                MainActivity.this.runOnUiThread(() -> Toast.makeText(MainActivity.this, "Giro " + txGiro.getText() + " - partenza [" + Gps.GetCurrentTimeStamp() + "]", Toast.LENGTH_SHORT).show());
+
+                menuItem.setEnabled(true);
+            } else {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.alterTitle);
+                builder.setMessage(R.string.errorePartenzaGiro);
+                builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
+                lpb.hide();
+                builder.show();
+                menuItem.setEnabled(true);
+            }
         }
 
-        if (abilitaCameraScanCode) {
-            qrCodeText = "";
-            Intent intent = new Intent(getApplicationContext(), ScanCodeActivity.class);
-            scanLauncher.launch(intent);
-        } else {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            builder.setTitle(R.string.alterTitle);
-            builder.setMessage(getString(R.string.camerenodisp) + GetStatApp().testo);
-            builder.setPositiveButton("OK", (dialog, which) -> {
-                if (GetStatApp().id <= STATO.CONFIGURED.id)
-                    startActivity(new Intent(MainActivity.this, SettingActivity.class));
-            });
-            builder.show();
-        }
     }
 
     private void handleDateClickListener(View v) {
-        DatePickerDialog datePickerDialog = new DatePickerDialog(MainActivity.this, (datePicker, year, month, day) -> {
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (datePicker, year, month, day) -> {
             myCalendar.set(Calendar.YEAR, year);
             myCalendar.set(Calendar.MONTH, month);
             myCalendar.set(Calendar.DAY_OF_MONTH, day);
 
             final String myFormat = "dd MMMM yyyy"; //In which you need put here
 
-            mHandler.post(() -> {
+            runOnUiThread(() -> {
                 SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.ITALIAN);
                 dtConsegna.setText(sdf.format(myCalendar.getTime()));
                 dtConsegna.postInvalidate();
@@ -872,16 +843,22 @@ public class MainActivity  extends AppCompatActivity {
     }
 
     private void handleCameraActivityResult(ActivityResult result) {
+        Log.d(TAG, "handleCameraActivityResult:" );
         if (result.getResultCode() == RESULT_OK) {
             Intent data = result.getData();
             if (data == null) return;
 
             if (GetStatApp() == STATO.GET_PICTURE_CAMERA) {
                 lpb.show();
-                Gson gson = new Gson();
+                GsonBuilder  gsonBuilder= new GsonBuilder();
+                gsonBuilder.registerTypeAdapter(Consegna.class, new ConsegnaDeserializer());
+                Gson gsonResult = gsonBuilder.create();
 
                 String c = data.getStringExtra("consegna");
-                Consegna consegna = gson.fromJson(c, Consegna.class);
+                Log.d(TAG, "handleCameraActivityResult:" +c);
+
+                Consegna consegna = gsonResult.fromJson(c, Consegna.class);
+
                 String comment = data.getStringExtra("commento");
                 String fileName = data.getStringExtra("filename");
                 boolean isNew = data.getBooleanExtra("isNew", false);
@@ -903,11 +880,9 @@ public class MainActivity  extends AppCompatActivity {
                             Consegna.Update(consegna, getBaseContext());
 
                             if (isNew) {
-                                Consegna.InsertConsegna(consegna, getBaseContext(), (message1, result1) -> {
-                                });
+                                Consegna.InsertConsegna(consegna, getBaseContext());
                             } else {
-                                Consegna.UpdateConsegna(consegna, getBaseContext(), (message1, result1) -> {
-                                });
+                                Consegna.UpdateConsegna(consegna, getBaseContext());
                             }
 
                             Button btnOk = clientDialog.findViewById(R.id.btnOk);
@@ -981,7 +956,6 @@ public class MainActivity  extends AppCompatActivity {
         try {
             List<DbQuery> dbQueries = new ArrayList<>();
             if (qrCodeText != null && !qrCodeText.isEmpty()) {
-                Logger.d(TAG, "QrCode load successful");
 
                 Terminale terminale = new Terminale(MainActivity.this);
                 String[] strings = {};
@@ -1013,7 +987,7 @@ public class MainActivity  extends AppCompatActivity {
                     strings = dati[0].split("\\#");
                 }
 
-                if (strings.length <= 0) {
+                if (strings.length == 0) {
                     strings = qrCodeText.split("\\#");
                 }
 
@@ -1036,7 +1010,7 @@ public class MainActivity  extends AppCompatActivity {
                 }
             }
         } catch (Exception e) {
-            Logger.d(TAG, "one error occurred on UPLOAD_TRAVEL: " + e.getLocalizedMessage());
+            Log.d(TAG, "one error occurred on UPLOAD_TRAVEL: " + e.getLocalizedMessage());
         }
     }
 
@@ -1065,7 +1039,7 @@ public class MainActivity  extends AppCompatActivity {
                 txGiro.setText(giro.getDsGiro());
                 dtConsegna.setEnabled(false);
             } catch (Exception e) {
-                Logger.e(TAG, "one error on initializeViewGiro occurred: " + e.getMessage());
+                Log.e(TAG, "one error on initializeViewGiro occurred: " + e.getMessage());
                 dtConsegna.setEnabled(true);
             }
         }
@@ -1083,7 +1057,7 @@ public class MainActivity  extends AppCompatActivity {
                 d = sdf.parse(dtConsegna.getText().toString());
             }
             catch (Exception e){
-                Logger.e(TAG, "one error on getJsonObjectAsync occurred: " + e.getMessage());
+                Log.e(TAG, "one error on getJsonObjectAsync occurred: " + e.getMessage());
             }
             SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ"); // from java.text.SimpleDateFormat
             assert d != null;
@@ -1097,7 +1071,6 @@ public class MainActivity  extends AppCompatActivity {
             HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(url)).newBuilder();
             urlBuilder.addQueryParameter("StringSearch", json.toString());
             url = urlBuilder.build().toString();
-
 
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -1119,14 +1092,18 @@ public class MainActivity  extends AppCompatActivity {
                     try{
                         String jsonData = response.body().string();
 
-                        Gson gson = new Gson();
-                        final Result result   =  gson.fromJson(jsonData, Result.class);
-
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        gsonBuilder.registerTypeAdapter(Result.class, new ResultDeserializer());
+                        Gson gsonResult = gsonBuilder.create();
+                        final Result result = gsonResult.fromJson(jsonData, Result.class);
 
                         if (!result.getData().toString().isEmpty()) {
                             try {
-                                Type type = new TypeToken<Giro>() {}.getType();
-                                final Giro giro = gson.fromJson(result.getData().toString(), type);
+                                gsonBuilder = new GsonBuilder();
+                                gsonBuilder.registerTypeAdapter(Giro.class, new GiroDeserializer());
+                                gsonResult = gsonBuilder.create();
+
+                                final Giro giro = gsonResult.fromJson(result.getData(), Giro.class);
 
                                 if (giro.getCdGiro() == null) {
                                     mHandler.post(() -> Toast.makeText(MainActivity.this, "Nessun giro assegnato all'autista selezionato.", Toast.LENGTH_SHORT).show());
@@ -1140,7 +1117,7 @@ public class MainActivity  extends AppCompatActivity {
                                     getTravelConsegnaCollectionAsync(terminale.getWebServerUrlErgon() + getString(R.string.GetTravelConsegnaCollection), giro);
                                 }
                             }catch(Exception e){
-                                Logger.e(TAG, "On error occurred: " + e.getLocalizedMessage());
+                                Log.e(TAG, "On error occurred: " + e.getLocalizedMessage());
                             }
                         }
 
@@ -1152,14 +1129,14 @@ public class MainActivity  extends AppCompatActivity {
                         });
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error1 on getJsonObjectAsync occurred: " + e.getMessage());
-                        Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "one error1 on getJsonObjectAsync occurred: " + e.getMessage());
+                        if (MainActivity.this != null) Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
                     }
                 }
             });
         }catch (Exception e){
-            Logger.e(TAG, "one error2 on getJsonObjectAsync occurred: " + e.getMessage());
-            Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "one error2 on getJsonObjectAsync occurred: " + e.getMessage());
+            if (MainActivity.this != null) Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1193,42 +1170,13 @@ public class MainActivity  extends AppCompatActivity {
         return true;
     }
 
-    @SuppressLint("Range")
-    public String getFileName(Uri uri) {
-        String result = null;
-        if (uri.getScheme().equals("content")) {
-            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
-                }
-            }
-        }
-        if (result == null) {
-            result = uri.getPath();
-            int cut = result.lastIndexOf('/');
-            if (cut != -1) {
-                result = result.substring(cut + 1);
-            }
-        }
-        return result;
-    }
-
-    public String getDateTimeFromURI(Uri uri) {
-        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-        cursor .moveToFirst();
-        int column_index_date_taken = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN);
-
-        String dateTaken = cursor.getString(column_index_date_taken);
-
-        return dateTaken;
-    }
 
     public void InitToolBar(String subtitle) {
         Toolbar tb = findViewById(R.id.topAppBar);
         tb.setTitle("Travel - " + subtitle);
         TextView tv = findViewById(R.id.stato);
         tv.setVisibility(View.GONE);
-        if(subtitle == "Home" ){
+        if(subtitle.equals("Home")) {
             tb.setNavigationIcon(null);
             tv.setVisibility(View.VISIBLE);
         }
@@ -1298,12 +1246,17 @@ public class MainActivity  extends AppCompatActivity {
                     try{
                         String jsonData = response.body().string();
 
-                        Gson gson = new Gson();
-                        final Result result   =  gson.fromJson(jsonData, Result.class);
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        gsonBuilder.registerTypeAdapter(Result.class, new ResultDeserializer());
+                        Gson gsonResult = gsonBuilder.create();
+                        final Result result = gsonResult.fromJson(jsonData, Result.class);
 
                         if (!result.getData().toString().isEmpty()) {
-                            Type type = new TypeToken<Consegna>() {}.getType();
-                            final Consegna consegna = gson.fromJson(result.getData().toString(), type);
+                            gsonBuilder = new GsonBuilder();
+                            gsonBuilder.registerTypeAdapter(Consegna.class, new ConsegnaDeserializer());
+                            gsonResult = gsonBuilder.create();
+                            final Consegna consegna = gsonResult.fromJson(result.getData().toString(), Consegna.class);
+
                             if (consegna.getCdCli()>0) {
 
                                 if (!Consegna.Update(consegna, MainActivity.this)){
@@ -1333,13 +1286,13 @@ public class MainActivity  extends AppCompatActivity {
                         MainActivity.this.runOnUiThread(MainActivity.this::populateRecyclerView);
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error on getTravelConsegnaAsync occurred: " + e.getMessage());
+                        Log.e(TAG, "one error on getTravelConsegnaAsync occurred: " + e.getMessage());
                         Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
                     }
                 }
             });
         }catch (Exception e){
-            Logger.e(TAG, "one error1 on getTravelConsegnaAsync occurred: " + e.getMessage());
+            Log.e(TAG, "one error1 on getTravelConsegnaAsync occurred: " + e.getMessage());
             Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
         }
     }
@@ -1375,20 +1328,37 @@ public class MainActivity  extends AppCompatActivity {
                     try{
                         String jsonData = response.body().string();
 
-                        Gson gson = new Gson();
-                        final Result result   =  gson.fromJson(jsonData, Result.class);
+                        //Gson gson = new Gson();
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        gsonBuilder.registerTypeAdapter(Result.class, new ResultDeserializer());
+                        Gson gsonResult = gsonBuilder.create();
+                        final Result result   =  gsonResult.fromJson(jsonData, Result.class);
 
                         if (!result.getData().toString().isEmpty()) {
-//                            Logger.e(TAG, "result: " + result.getData().toString());
-//                            Type type = new TypeToken<Consegna>() {}.getType();
-//                            final Consegna consegna = gson.fromJson(result.getData().toString(), type);
-                            Type listType = new  TypeToken<List<Consegna>> (){}.getType();
-                            List<Consegna> consegnas = gson.fromJson(result.getData().toString(), listType);
+                            gsonBuilder = new GsonBuilder();
+                            gsonBuilder.registerTypeAdapter(Consegna.class, new ConsegnaDeserializer());
+                            gsonResult = gsonBuilder.create();
+                            Type listType = new ParameterizedType() {
+                                public Type[] getActualTypeArguments() {
+                                    return new Type[] { Consegna.class };
+                                }
+                                public Type getRawType() {
+                                    return List.class;
+                                }
+                                public Type getOwnerType() {
+                                    return null;
+                                }
+                            };
+
+                            List<Consegna> consegnas = gsonResult.fromJson(result.getData().toString(), listType);
+//                            List<Consegna> consegnas = gsonResult.fromJson(result.getData().toString(), new ArrayList<Consegna>().getClass().getGenericSuperclass());
+
                             if (consegnas.size()>0) {
                                 List<DbQuery> dbQueries = new ArrayList<>();
                                 for (int i = 0; i < consegnas.size() ; i++)
                                 {
-                                    dbQueries.add(Consegna.Insert(consegnas.get(i).getAnnoReg(),consegnas.get(i).getNrReg() ));
+                                    final Consegna c = consegnas.get(i);
+                                    dbQueries.add(Consegna.Insert(c.getAnnoReg(),c.getNrReg() ));
                                 }
                                 if (Consegna.Insert(dbQueries, MainActivity.this)) {
                                     Step.Update(STATO.UPLOAD_DETAIL_TRAVEL.id, MainActivity.this);
@@ -1429,13 +1399,17 @@ public class MainActivity  extends AppCompatActivity {
                         MainActivity.this.runOnUiThread(MainActivity.this::populateRecyclerView);
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error on getTravelConsegnaAsync occurred: " + e.getMessage());
-                        Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "one error on getTravelConsegnaAsync occurred: " + e.getMessage());
+
+                        MainActivity.this.runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
+                        });
+
                     }
                 }
             });
         }catch (Exception e){
-            Logger.e(TAG, "one error1 on getTravelConsegnaAsync occurred: " + e.getMessage());
+            Log.e(TAG, "one error1 on getTravelConsegnaAsync occurred: " + e.getMessage());
             Toast.makeText(MainActivity.this, "Piano di Carico non acquisibile", Toast.LENGTH_SHORT).show();
         }
     }
@@ -1492,75 +1466,58 @@ public class MainActivity  extends AppCompatActivity {
                     try {
                         String jsonData = response.body().string();
 
-                        Gson gson = new Gson();
-                        final Result result = gson.fromJson(jsonData, Result.class);
+//                        Gson gson = new Gson();
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        gsonBuilder.registerTypeAdapter(Result.class, new ResultDeserializer());
+                        Gson gsonResult = gsonBuilder.create();
+                        final Result result = gsonResult.fromJson(jsonData, Result.class);
 
                         if (result.Error != null)
-                            Logger.e(TAG, result.getError().toString());
+                            Log.e(TAG, result.getError().toString());
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error occurred [UpdateStartGiro 2]: " + e.getLocalizedMessage());
+                        Log.e(TAG, "one error occurred [UpdateStartGiro 2]: " + e.getLocalizedMessage());
                     }
                 }
             });
         } catch (Exception e) {
-            Logger.e(TAG, "one error occurred [UpdateStartGiro 1]: " + e.getLocalizedMessage());
+            Log.e(TAG, "one error occurred [UpdateStartGiro 1]: " + e.getLocalizedMessage());
         }
     }
 
     //Callback received when a permissions request has been completed.
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,                                           @NonNull int[] grantResults) {
 //        Log.i(TAG, "onRequestPermissionResult");
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.length <= 0) {
-                // If img_user interaction was interrupted, the permission request is cancelled and you
-                // receive empty arrays.
-//                Log.i(TAG, "User interaction was cancelled.");
-            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                Log.i(TAG, "Permission granted, updates requested, starting location updates");
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permesso concesso, puoi eseguire le azioni corrispondenti
             } else {
-                // Permission denied.
-
-                // Notify the img_user via a SnackBar that they have rejected a core permission for the
-                // app, which makes the Activity useless. In a real app, core permissions would
-                // typically be best requested during a welcome-screen flow.
-
-                // Additionally, it is important to remember that a permission might have been
-                // rejected without asking the img_user for permission (device policy or "Never ask
-                // again" prompts). Therefore, a img_user interface affordance is typically implemented
-                // when permissions are denied. Otherwise, your app could appear unresponsive to
-                // touches or interactions which have required permissions.
-                showSnackbar(R.string.permission_denied_explanation,
-                        R.string.settings, new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                // Build intent that displays the App settings screen.
-                                Intent intent = new Intent();
-                                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                Uri uri = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null);
-                                intent.setData(uri);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                            }
-                        });
+                // Permesso negato, mostra un messaggio all'utente e offri la possibilità di aprire le impostazioni dell'app
+                Snackbar snackbar = Snackbar.make(findViewById(android.R.id.content), R.string.permission_denied_explanation, Snackbar.LENGTH_LONG);
+                snackbar.setAction(R.string.settings, view -> openAppSettings());
+                snackbar.show();
             }
         }
     }
 
+    private void openAppSettings() {
+        Intent intent = new Intent();
+        intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null);
+        intent.setData(uri);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
+
     @Override
     protected void onDestroy() {
-//        stopService(new Intent(this, LocationMonitoringService.class));
-//        mTracking = false;
         super.onDestroy();
     }
 
     @Override
     protected void onStop() {
-//        stopService(new Intent(this, LocationMonitoringService.class));
-//        mTracking = false;
         super.onStop();
     }
 

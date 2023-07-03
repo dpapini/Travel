@@ -3,11 +3,9 @@ package com.saporiditoscana.travel;
 import android.content.Context;
 import android.widget.ArrayAdapter;
 
-import com.saporiditoscana.travel.Orm.Automezzo;
+import androidx.annotation.NonNull;
 
 import java.util.List;
-
-import androidx.annotation.NonNull;
 
 public class AutomezzoAdapter<Automezzo> extends ArrayAdapter<Automezzo> {
     public AutomezzoAdapter(@NonNull Context context, int resource, @NonNull List<Automezzo> objects) {

@@ -3,14 +3,15 @@ package com.saporiditoscana.travel.Orm;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.DbHelper.DbQuery;
-import com.saporiditoscana.travel.Logger;
 import com.saporiditoscana.travel.Result;
 
 import java.io.IOException;
@@ -31,7 +32,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class Consegna  implements Serializable {
-    private static final String TAG = "Consegna";
+    private static final String TAG = "MainActivity";
     private Context context;
 
     @SerializedName("AnnoReg")
@@ -85,12 +86,6 @@ public class Consegna  implements Serializable {
     @SerializedName("FileBase64")
     private String FileBase64;
 
-
-    public interface Completed{
-        void callback(String message, Integer result);
-    }
-
-
     public Consegna(){}
 
     public Consegna(Context context){
@@ -131,10 +126,12 @@ public class Consegna  implements Serializable {
                     this.FileBase64 = c.getString(c.getColumnIndex("file_base64"));
                 }
             }
-        }catch (Exception e)
-        {
-//            Log.e(TAG, e.getMessage());
-
+        }catch (Exception e)        {
+            Log.e(TAG, e.getMessage());        }
+        finally {
+            if (c!=null){
+                c.close();
+            }
         }
     }
 
@@ -353,6 +350,9 @@ public class Consegna  implements Serializable {
     public void setFileBase64(String fileBase64) {this.FileBase64 = fileBase64;}
 
     public static DbQuery Insert(int AnnoReg, int NrReg){
+
+        Log.d(TAG, "Insert " + AnnoReg  );
+        Log.d(TAG, "Insert " + NrReg  );
         DbQuery dbQuery = new DbQuery();
         try{
             StringBuilder sb;
@@ -385,7 +385,7 @@ public class Consegna  implements Serializable {
         }
         catch (Exception e)
         {
-//            Log.e(TAG, e.getMessage());
+            Log.e(TAG, e.getMessage());
         }
         return dbQuery;
     }
@@ -438,7 +438,7 @@ public class Consegna  implements Serializable {
         catch (Exception e)
         {
             result = false;
-            Logger.e(TAG,e.getLocalizedMessage(), e);
+            Log.e(TAG,e.getLocalizedMessage(), e);
         }
         return result;
     }
@@ -459,7 +459,7 @@ public class Consegna  implements Serializable {
         catch (Exception e)
         {
             result = false;
-            Logger.e(TAG,e.getLocalizedMessage(), e);
+            Log.e(TAG,e.getLocalizedMessage(), e);
         }
         return result;
     }
@@ -527,7 +527,7 @@ public class Consegna  implements Serializable {
         }
         catch (Exception e)
         {
-            Logger.e(TAG,e.getLocalizedMessage(), e);
+            Log.e(TAG,e.getLocalizedMessage(), e);
             return 0;
         }
     }
@@ -641,7 +641,7 @@ public class Consegna  implements Serializable {
             }
         }catch (Exception e)
         {
-            Logger.e(TAG, "one error occurred:" + e.getLocalizedMessage());
+            Log.e(TAG, "one error occurred:" + e.getLocalizedMessage());
 
         }
         return consegnas;
@@ -685,8 +685,11 @@ public class Consegna  implements Serializable {
             }
         }catch (Exception e)
         {
-            Logger.e(TAG, "one error occurred:" + e.getLocalizedMessage());
-
+            Log.e(TAG, "one error occurred:" + e.getLocalizedMessage());
+        }finally {
+            if (c!=null){
+                c.close();
+            }
         }
         return consegnas;
     }
@@ -769,22 +772,19 @@ public class Consegna  implements Serializable {
     /**
      Download delle consegne e chiamata al web server per aggiornamento su gestionale
     **/
-    public static void  InsertConsegna(final Consegna consegna, final Context context, Completed completed) {
+    public static void  InsertConsegna(final Consegna consegna, final Context context) {
         try {
-
+            Log.d(TAG, "InsertConsegna:" + consegna);
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
-//            Logger.d(TAG, "InsertConsegna");
             Terminale terminale = new Terminale(context);
             String url = terminale.getWebServerUrlErgon() + "InsertConsegnaEsito";
 
-//            Logger.d(TAG, "terminale Id: " + terminale.getId());
-
-            Gson gson = new Gson();
+            GsonBuilder gsonBuilder = new GsonBuilder();
+            gsonBuilder.registerTypeAdapter(Consegna.class, new ConsegnaSerializer());
+            Gson gson = gsonBuilder.create();
 
             consegna.setIdDevice(terminale.getId()); //recupero l'id del device
-
-//            Logger.d(TAG, ": " + consegna.toString());
 
             OkHttpClient client = new OkHttpClient();
             Request request = new Request.Builder()
@@ -792,15 +792,14 @@ public class Consegna  implements Serializable {
                     .post(RequestBody.create(mediaType, gson.toJson(consegna)))
                     .build();
             Response responses = null;
-
+            Log.d(TAG, "InsertConsegna Request:" + request);
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    Log.d(TAG, "onFailure " + e.getLocalizedMessage());
                     consegna.setFlInviato("N");
                     consegna.setFlUploaded("N");
                     Consegna.Update(consegna,context, consegna.TsValidita);
-                    completed.callback("",-1);
                 }
 
                 @Override
@@ -810,42 +809,37 @@ public class Consegna  implements Serializable {
 
                         Gson gson = new Gson();
                         final Result result = gson.fromJson(jsonData, Result.class);
-
+                        Log.d(TAG, "onResponse:" + result);
                         if (result.Error != null) {
-                            Logger.e(TAG, result.getError().toString());
+                            Log.e(TAG, result.getError().toString());
                             consegna.setFlInviato("N");
                             consegna.setFlUploaded("N");
                             Consegna.Update(consegna,context, consegna.TsValidita);
 
-                            completed.callback("",-1);
-
                             throw new Exception("Aggiornamento fallito");
                         }else BoolUpdateStato(consegna, context);
-                        completed.callback("",0);
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                        Log.e(TAG, "one error occurred: " + e.getLocalizedMessage());
                         consegna.setFlInviato("N");
                         consegna.setFlUploaded("N");
                         Consegna.Update(consegna,context, consegna.TsValidita);
-                        completed.callback("",-1);
                     }
                 }
             });
         } catch (Exception e) {
-            Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
+            Log.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
             consegna.setFlInviato("N");
             consegna.setFlUploaded("N");
             Consegna.Update(consegna,context, consegna.TsValidita);
-            completed.callback("",-1);
         }
     }
 
-    public static void UpdateConsegna(final Consegna consegna, final Context context, Completed completed) {
+    public static void UpdateConsegna(final Consegna consegna, final Context context) {
         try {
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
-            Logger.d(TAG, "UpdateConsegna");
+            Log.d(TAG, "UpdateConsegna");
 
             Terminale terminale = new Terminale(context);
             String url = terminale.getWebServerUrlErgon() + "UpdateConsegnaEsitoPost";
@@ -864,11 +858,10 @@ public class Consegna  implements Serializable {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    Log.d(TAG, "onFailure " + e.getLocalizedMessage());
                     consegna.setFlInviato("N");
                     consegna.setFlUploaded("N");
                     Consegna.Update(consegna,context, consegna.TsValidita);
-                    completed.callback("",-1);
                 }
 
                 @Override
@@ -880,33 +873,28 @@ public class Consegna  implements Serializable {
                         final Result result = gson.fromJson(jsonData, Result.class);
 
                         if (result.Error != null) {
-                            Logger.e(TAG, result.getError().toString());
+                            Log.e(TAG, result.getError().toString());
                             consegna.setFlInviato("N");
                             consegna.setFlUploaded("N");
                             Consegna.Update(consegna,context, consegna.TsValidita);
 
-                            completed.callback("",-1);
                             throw new Exception("Aggiornamento fallito");
                         }else BoolUpdateStato(consegna, context);
-
-                        completed.callback("",0);
 
                     } catch (Exception e) {
                         consegna.setFlInviato("N");
                         consegna.setFlUploaded("N");
                         Consegna.Update(consegna,context, consegna.TsValidita);
 
-                        completed.callback("",-1);
-                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                        Log.e(TAG, "one error occurred: " + e.getLocalizedMessage());
                     }
                 }
             });
         } catch (Exception e) {
-            Logger.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
+            Log.e(TAG, "one error occurred 1: " + e.getLocalizedMessage());
             consegna.setFlInviato("N");
             consegna.setFlUploaded("N");
             Consegna.Update(consegna,context, consegna.TsValidita);
-            completed.callback("",-1);
         }
     }
 
@@ -940,5 +928,9 @@ public class Consegna  implements Serializable {
                 .add("FileType='" + FileType + "'")
                 .add("FileBase64='" + FileBase64 + "'")
                 .toString();
+    }
+
+    public Boolean isPagamentoContanti() {
+        return getPagamentoContanti();
     }
 }

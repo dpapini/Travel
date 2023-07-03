@@ -1,20 +1,26 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
-import com.saporiditoscana.travel.Logger;
+import android.util.Log;
 import com.saporiditoscana.travel.Result;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 import okhttp3.Call;
@@ -30,16 +36,17 @@ public class Giro {
     private Context context;
 
     @SerializedName("CdDep")
-    private String CdDep = new  String("");
+    private String CdDep = "";
     @SerializedName("CdGiro")
-    private String CdGiro = new String("");
+    private String CdGiro = "";
     @SerializedName("DsGiro")
-    private String DsGiro = new String("");
+    private String DsGiro = "";
     @SerializedName("DtConsegna")
-    private String DtConsegna = new String("");
+    private String DtConsegna = "";
 
     public Giro(){}
 
+    @SuppressLint("Range")
     public Giro(Context context){
         this.context = context;
         Cursor c = GetGiro();
@@ -57,18 +64,20 @@ public class Giro {
         {
 //            Log.e(TAG, e.getMessage());
         }
+        finally {
+            if (c!=null){
+                c.close();
+            }
+        }
     }
 
     private Cursor GetGiro(){
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_giro ");
 
             DbManager dbManager = new DbManager(this.context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT * FROM t_giro ", null);
         }catch (Exception e){
-//            Log.e(TAG, e.getMessage());
             c= null;
         }
         return  c;
@@ -133,7 +142,7 @@ public class Giro {
     }
 
     public static  Boolean Insert(Giro giro, Context context){
-        Boolean result;
+        boolean result;
         try{
             DbManager dbManager;
             dbManager = new DbManager(context);
@@ -166,7 +175,7 @@ public class Giro {
 
 
     public static  Boolean Delete(Context context){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -188,7 +197,7 @@ public class Giro {
 
     public static void UpdateEndGiro(final Giro giro, final Context context) {
         try {
-            Logger.d(TAG, "UpdateEndGiro");
+            Log.d(TAG, "UpdateEndGiro");
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
             Terminale terminale = new Terminale(context);
@@ -200,7 +209,7 @@ public class Giro {
             json.addProperty("DtConsegna", giro.getDtConsegnaddMMyyyy());
             json.addProperty("TsEnd", Gps.GetCurrentTimeStamp());
 
-            HttpUrl.Builder urlBuilder = HttpUrl.parse(url).newBuilder();
+            HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(url)).newBuilder();
             urlBuilder.addQueryParameter("EditJson", json.toString());
             url = urlBuilder.build().toString();
 
@@ -209,12 +218,11 @@ public class Giro {
             Request request = new Request.Builder()
                     .url(url)
                     .build();
-            Response responses = null;
 
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Logger.d(TAG, "onFailure: " + e.getLocalizedMessage());
+                    Log.d(TAG, "onFailure: " + e.getLocalizedMessage());
                 }
 
                 @Override
@@ -226,16 +234,16 @@ public class Giro {
                         final Result result = gson.fromJson(jsonData, Result.class);
 
                         if (result.Error != null)
-                            Logger.e(TAG, result.getError().toString());
+                            Log.e(TAG, result.getError().toString());
 
                     } catch (Exception e) {
-                        Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+                        Log.e(TAG, "one error occurred: " + e.getLocalizedMessage());
                     }
                 }
             });
 
         } catch (Exception e) {
-            Logger.e(TAG, "one error occurred: " + e.getLocalizedMessage());
+            Log.e(TAG, "one error occurred: " + e.getLocalizedMessage());
         }
     }
 
@@ -249,3 +257,5 @@ public class Giro {
                 .toString();
     }
 }
+
+

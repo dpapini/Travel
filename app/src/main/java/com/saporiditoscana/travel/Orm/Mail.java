@@ -1,24 +1,25 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import com.google.gson.annotations.SerializedName;
-import com.saporiditoscana.travel.Logger;
 import com.saporiditoscana.travel.Result;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
-import java.util.concurrent.TimeUnit;
-
-import android.content.BroadcastReceiver;
-
-
-import androidx.annotation.NonNull;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -134,19 +135,22 @@ public class Mail extends BroadcastReceiver {
     public Mail(Context context, Completed completed){
         this.context = context;
         this.completed = completed;
-        this.AttachCollection = new ArrayList<Attach>();
+        this.AttachCollection = new ArrayList<>();
     }
 
     public void SendMail() {
         try {
-//            Logger.d(TAG, "Inizio SendMail");
+            Log.d(TAG, "SendMail:" );
             final MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
 
             Terminale terminale = new Terminale(context);
-//            Logger.d(TAG, "Terminale id: " + terminale.getId());
             String url = terminale.getApiServerUrl() + "mail/SendMail";
+            Log.d(TAG, "SendMail: configure gsonbuilder" );
+            GsonBuilder gsonBuilder = new GsonBuilder();
+            gsonBuilder.registerTypeAdapter(Mail.class, new MailSerializer());
+            Gson gson = gsonBuilder.create();
 
-            Gson gson = new Gson();
+            Log.d(TAG, "SendMail: create gsonbuilder" );
             Mail m = new Mail();
             m.setTerminaleId(terminale.getId());
             m.setAddressForm(this.AddressForm);
@@ -163,48 +167,34 @@ public class Mail extends BroadcastReceiver {
                     .url(url)
                     .post(RequestBody.create(mediaType, gson.toJson(m)))
                     .build();
-            Response responses = null;
-
-//            Logger.d(TAG, ": " + m.toString());
-
-//            for (int i = 0; i < m.AttachCollection.size(); i++) {
-//                Logger.d(TAG, "allegato: " +  m.getAttachCollection().get(i).toString());
-//            }
-
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Logger.d(TAG, "onFailure " + e.getLocalizedMessage());
+                    Log.d(TAG, "onFailure " + e.getLocalizedMessage());
                     sendMessageToUI(context, "Invio mail non riuscito.", -1);
-//                    Logger.d(TAG, "Fine SendMail");
                 }
 
                 @Override
                 public void onResponse(Call call, final Response response) throws IOException {
                     try {
                         String jsonData = response.body().string();
-
-//                        Logger.d(TAG, "onResponse: " + jsonData);
-
                         Gson gson = new Gson();
                         final Result result = gson.fromJson(jsonData, Result.class);
 
+                        Log.d(TAG, " onResponse:" + result);
                         if (result.Error == null || result.Error == "") {
                             sendMessageToUI(context, "Invio mail avvenuto con successo.", 0);
                         }else{
                             sendMessageToUI(context, "Invio mail non riuscito.", -1);
                         }
 
-//                        Logger.d(TAG, "Fine SendMail");
                     } catch (Exception e) {
-                        Logger.e(TAG, "Exception onResponse: " + e.getMessage());
-//                        Logger.d(TAG, "Fine SendMail");
+                        Log.e(TAG, "Exception onResponse: " + e.getMessage());
                     }
                 }
             });
         } catch (Exception e) {
-            Logger.e(TAG, "Exception on SendMail:" + e.getMessage());
-//            Logger.d(TAG, "Fine SendMail");
+            Log.e(TAG, "Exception on SendMail:" + e.getMessage());
         }
     }
 

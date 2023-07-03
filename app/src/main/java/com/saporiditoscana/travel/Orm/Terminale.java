@@ -1,9 +1,9 @@
 package com.saporiditoscana.travel.Orm;
 
 
-import android.database.Cursor;
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.util.Log;
+import android.database.Cursor;
 
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
@@ -15,19 +15,19 @@ public class Terminale {
     @SerializedName("id")
     private int id = -1;
     @SerializedName("testo")
-    private String testo= new  String("");
+    private String testo= "";
     @SerializedName("ftpServer")
-    private String ftpServer = new String("");
+    private String ftpServer = "";
     @SerializedName("webServer")
-    private String webServer = new String("");
+    private String webServer = "";
     @SerializedName("targa")
-    private String targa = new String("");
+    private String targa = "";
     @SerializedName("conducente")
-    private String conducente = new String("");
+    private String conducente = "";
     @SerializedName("idConducente")
-    private String idConducente = new String("");
+    private String idConducente = "";
     @SerializedName("idAutomezzo")
-    private String idAutomezzo = new String("");
+    private String idAutomezzo = "";
 
 
     public String getConducente() {
@@ -38,6 +38,7 @@ public class Terminale {
         this.conducente = conducente;
     }
 
+    @SuppressLint("Range")
     public Terminale(Context context) {
         this.context = context;
         Cursor c = GetTerminale();
@@ -59,6 +60,10 @@ public class Terminale {
         {
 //            Log.e(TAG, e.getMessage());
 
+        }finally {
+            if (c != null) {
+                c.close();
+            }
         }
     }
 
@@ -146,11 +151,9 @@ public class Terminale {
     private Cursor GetTerminale(){
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_terminale ");
 
             DbManager dbManager = new DbManager(this.context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT * FROM t_terminale ", null);
         }catch (Exception e){
 //            Log.e(TAG, e.getMessage());
             c= null;
@@ -159,7 +162,7 @@ public class Terminale {
     }
 
     public  Boolean InsertTerminale(int id){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -184,7 +187,7 @@ public class Terminale {
 
     //aggiorna le informazioni del terminale
     public  Boolean UpdateTerminale(Terminale terminale){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -225,7 +228,7 @@ public class Terminale {
 
     //Pulisce le informazioni del terminale
     public  Boolean DeleteTerminale(Terminale terminale){
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
             sb = new StringBuilder();
@@ -240,12 +243,12 @@ public class Terminale {
             sb.append(" WHERE id = ?");
 
             String[] parameters = new String[]{
-            String.valueOf(""),
-            String.valueOf(""),
-            String.valueOf(""),
-            String.valueOf(""),
-            String.valueOf(""),
-            String.valueOf(""),
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
             String.valueOf(terminale.id)};
 
             DbManager dbManager;

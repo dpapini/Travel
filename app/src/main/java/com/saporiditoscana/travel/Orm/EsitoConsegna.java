@@ -1,5 +1,6 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
@@ -9,7 +10,6 @@ import com.saporiditoscana.travel.DbHelper.DbManager;
 
 public class EsitoConsegna {
     private static final String TAG = "Giro";
-    private Context context;
 
     @SerializedName("id")
     private int id;
@@ -32,20 +32,19 @@ public class EsitoConsegna {
         this.testo = testo;
     }
 
+    @SuppressLint("Range")
     public  static String GetTesto(Context context, int id){
         StringBuilder result = new StringBuilder();
         Cursor c;
 
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT testo  FROM d_esito_consegna WHERE id = ? ");
 
             String[] parameters = new String[]{
                     String.valueOf(id)
             };
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), parameters);
+            c = dbManager.GetCursor("SELECT testo  FROM d_esito_consegna WHERE id = ? ", parameters);
 
             if (c!= null){
                 while (c.moveToNext()){
@@ -54,7 +53,6 @@ public class EsitoConsegna {
             }
         }catch (Exception e){
             Log.e(TAG, e.getMessage());
-            c= null;
         }
         return result.toString();
     }

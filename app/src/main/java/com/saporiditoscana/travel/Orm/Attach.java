@@ -44,4 +44,8 @@ public class Attach{
                 .add("MediaType='" + MediaType + "'")
                 .toString();
     }
+
+    public String getFileType() {
+        return getMediaType();
+    }
 }

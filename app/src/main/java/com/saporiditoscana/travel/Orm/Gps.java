@@ -1,12 +1,12 @@
 package com.saporiditoscana.travel.Orm;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
 import com.saporiditoscana.travel.DbHelper.DbManager;
 import com.saporiditoscana.travel.Result;
@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -36,11 +35,11 @@ public class Gps {
     @SerializedName("id")
     private int id;
     @SerializedName("tsValidita")
-    private String tsValidita = new  String("");
+    private String tsValidita = "";
     @SerializedName("latitudine")
-    private String latitudine = new String("");
+    private String latitudine = "";
     @SerializedName("longitudine")
-    private String longitudine = new String("");
+    private String longitudine = "";
 
     public int getId() {return id;}
 
@@ -104,7 +103,7 @@ public class Gps {
 
     public static  Boolean Insert(Gps gps, Context context){
         Log.d(TAG,"Insert gps");
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
 
@@ -112,7 +111,7 @@ public class Gps {
             sb.append("INSERT INTO t_gps (ts_validita, latitudine, longitudine, fl_inviato) ");
             sb.append("VALUES (?,?,?,?) ");
 
-            String[] parameters = new String[]{ String.valueOf(gps.getTsValidita()).isEmpty() ? String.valueOf(Gps.GetCurrentTimeStamp()): String.valueOf(gps.getTsValidita()),
+            String[] parameters = new String[]{ String.valueOf(gps.getTsValidita()).isEmpty() ? Gps.GetCurrentTimeStamp() : String.valueOf(gps.getTsValidita()),
                     String.valueOf(gps.getLatitudine()),
                     String.valueOf(gps.getLongitudine()),
                     String.valueOf('N'),
@@ -134,7 +133,7 @@ public class Gps {
 
     public static  Boolean Update(Gps gps, Context context){
 //        Log.d(TAG,"Insert gps");
-        Boolean result;
+        boolean result;
         try{
             StringBuilder sb;
 
@@ -163,11 +162,9 @@ public class Gps {
     public static Cursor GetDati(Context context){
         Cursor c;
         try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("SELECT * FROM t_gps WHERE IFNULL(fl_inviato,'N') <> 'S' ORDER BY ts_validita ");
 
             DbManager dbManager = new DbManager(context);
-            c = dbManager.GetCursor(sb.toString(), null);
+            c = dbManager.GetCursor("SELECT * FROM t_gps WHERE IFNULL(fl_inviato,'N') <> 'S' ORDER BY ts_validita ", null);
         }catch (Exception e){
             Log.e(TAG, e.getMessage());
             c= null;
@@ -175,9 +172,10 @@ public class Gps {
         return  c;
     }
 
+    @SuppressLint("Range")
     public static List<Gps> GetLista (Context context)
     {
-        List<Gps> gpsList = new ArrayList<Gps>();
+        List<Gps> gpsList = new ArrayList<>();
         Cursor c = Gps.GetDati(context);
         try {
             if (c!= null) {
@@ -190,6 +188,7 @@ public class Gps {
 
                     gpsList.add(gps);
                 }
+                c.close();
             }
         }catch (Exception e)
         {

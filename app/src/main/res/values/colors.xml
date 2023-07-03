@@ -5,4 +5,5 @@
     <color name="colorAccent">#022D99</color>
     <color name="iconEnabled">#FFFFFF</color>
     <color name="iconDisabled">#8E8D8D</color>
+    <color name="colorBackground">#8E8D8D</color>
 </resources>

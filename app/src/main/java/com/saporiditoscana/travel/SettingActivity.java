@@ -1,12 +1,10 @@
 package com.saporiditoscana.travel;
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,35 +14,39 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.Spinner;
-
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import com.saporiditoscana.travel.DbHelper.DbManager;
-import com.saporiditoscana.travel.Orm.Conducente;
-import com.saporiditoscana.travel.Orm.Terminale;
-
-import java.io.File;
-import java.io.IOException;
-
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 import androidx.core.widget.ContentLoadingProgressBar;
+import android.util.Log;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import com.saporiditoscana.travel.DbHelper.DbManager;
+import com.saporiditoscana.travel.Orm.Conducente;
+import com.saporiditoscana.travel.Orm.ConducenteDeserializer;
+import com.saporiditoscana.travel.Orm.Terminale;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
@@ -70,37 +72,15 @@ public class SettingActivity extends AppCompatActivity {
     private EditText txWebServer;
     private EditText txTarga;
     private EditText txAutista;
-//    private Spinner ddConducente;
     private Conducente conducenteSelected;
     private Handler mHandler;
-    private ImageButton updateVersion;
-    private static final int FTP_DOWNLOAD =1;
+    private ActivityResultLauncher<Intent> ftpLauncher;
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode){
-            case FTP_DOWNLOAD:
-                if (resultCode == Activity.RESULT_OK){
-                    final String fullPath = data.getExtras().get("fullPath").toString();
-                    Uri destination = uriFromFile(getBaseContext(), new File(fullPath));
-
-                    Intent promptInstall = new Intent(Intent.ACTION_VIEW);
-                    promptInstall.setDataAndType(destination,"application/vnd.android.package-archive");
-                    promptInstall.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    this.getBaseContext().startActivity(promptInstall);
-//                    'Process.killProcess(Process.myPid());
-                }
-            break;
-        }
-    }
+    public static PackageInfo packageInfo;
 
     private static Uri uriFromFile(Context context, File file) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            return FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", file);
-        } else {
-            return Uri.fromFile(file);
-        }
+        //return FileProvider.getUriForFile(context, packageInfo.versionName + ".provider", file);
+        return FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", file);
     }
 
     private void InitToolBar(String subtitle) {
@@ -108,7 +88,7 @@ public class SettingActivity extends AppCompatActivity {
         tb.setTitle("Travel - " + subtitle);
         TextView tv = findViewById(R.id.stato);
         tv.setVisibility(View.GONE);
-        if(subtitle == "Home" ){
+        if(Objects.equals(subtitle, "Home")){
             tb.setNavigationIcon(null);
             tv.setVisibility(View.VISIBLE);
         }
@@ -118,23 +98,17 @@ public class SettingActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        Logger.i(TAG, "Create");
         setContentView(R.layout.activity_setting);
+
         mHandler = new Handler(Looper.getMainLooper());
         lpb = findViewById(R.id.lpb);
-        updateVersion = findViewById(R.id.update_version);
-        updateVersion.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent   = new Intent(getBaseContext(), FtpActivity.class);
-                startActivityForResult(intent, FTP_DOWNLOAD);
-
-
-                Toast.makeText(getApplicationContext(), "Aggiornamento versione", Toast.LENGTH_LONG).show();
-            }
+        ImageButton updateVersion = findViewById(R.id.update_version);
+        updateVersion.setOnClickListener(v -> {
+            Intent intent   = new Intent(getBaseContext(), FtpActivity.class);
+            ftpLauncher.launch(intent);
+            Toast.makeText(getApplicationContext(), "Aggiornamento versione", Toast.LENGTH_LONG).show();
         });
 
-//        Logger.i(TAG, "InitToolBar");
         InitToolBar("Impostazioni");
 
         //setto Terminale
@@ -147,12 +121,9 @@ public class SettingActivity extends AppCompatActivity {
         txWebServer = findViewById(R.id.txWebServer);
         txTarga = findViewById(R.id.txTarga);
         txAutista = findViewById(R.id.txAutista);
-//        ddConducente = findViewById(R.id.ddConducente);
-//        ddAutomezzo = findViewById(R.id.ddAutomezzo);
 
         if (terminale.getId() > 0 ) //terminale inizializzato valorizzo tutti i campi
         {
-//            Logger.i(TAG, "terminale inizializzato");
             mode = MODE.UPDATE;
 
             txTerminale = findViewById(R.id.txTerminale);
@@ -175,208 +146,126 @@ public class SettingActivity extends AppCompatActivity {
             txAutista = findViewById(R.id.txAutista);
             txAutista.setText(terminale.getConducente());
         }else{
-//            Logger.i(TAG, "terminale nuovo");
             mode = MODE.NEW;
 
             enableFields(false);
         }
 
-//        getJsonAutomezzoAsync("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdAutomezzo");
-//        Logger.i(TAG, "chiamo GetDdConducente ");
-        getJsonConducenteAsync("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdConducente");
-    }
+        getJsonConducenteAsync();
 
-//    private void getJsonAutomezzoAsync(String url) {
-//        try {
-//            OkHttpClient client = new OkHttpClient();
-//            Request request = new Request.Builder()
-//                    .url(url)
-//                    .build();
-//            Response responses = null;
-//
-//            client.newCall(request).enqueue(new Callback() {
-//                @Override
-//                public void onFailure(Call call, IOException e) {
-//                    e.printStackTrace();
-//                }
-//
-//                @Override
-//                public void onResponse(Call call, final Response response) throws IOException {
-//                    if (!response.isSuccessful()) {
-//                        throw new IOException("Unexpected code " + response);
-//                    }
-//                    try{
-//                        final String jsonData = response.body().string();
-//
-//                        Gson gson = new Gson();
-//                        final Result result   =  gson.fromJson(jsonData, Result.class);
-//                        Type listType = new  TypeToken<List<Automezzo>> (){}.getType();
-//                        final List<Automezzo>  automezzoList = gson.fromJson(result.Data.toString(),listType);
-//                        Automezzo a = new Automezzo();
-//                        a.setId("-1");
-//                        a.setTarga("Selezionare la targa");
-//                        automezzoList.add(0,a);
-//
-//                        mHandler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                final Spinner spinner = findViewById(R.id.ddAutomezzo);
-//                                AutomezzoAdapter automezzoAdapter = new AutomezzoAdapter<Automezzo>(getApplicationContext(), android.R.layout.simple_spinner_item, automezzoList);
-//
-//                                spinner.setAdapter(automezzoAdapter);
-//                                spinner.setEnabled(true);
-//
-//                                if(terminale != null && terminale.getIdAutomezzo()!= null && !terminale.getIdAutomezzo().isEmpty() && !terminale.getIdAutomezzo().equals("-1")) {
-//                                    spinner.setSelection(automezzoAdapter.getAutomezzoById(terminale.getIdAutomezzo()));
-//                                    spinner.setEnabled(false);
-//                                }
-//
-//                                spinner.setOnItemSelectedListener(
-//                                    new AdapterView.OnItemSelectedListener() {
-//
-//                                        @Override
-//                                        public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-//
-//                                            int position = spinner.getSelectedItemPosition();
-//                                            if (position >0 ) {
-//                                                Toast.makeText(getApplicationContext(), "You have selected " + automezzoList.get(position), Toast.LENGTH_LONG).show();
-//                                                txTarga = findViewById(R.id.txTarga);
-//                                                txTarga.setText(automezzoList.get(position).Targa);
-//                                            }
-//                                        }
-//
-//                                        @Override
-//                                        public void onNothingSelected(AdapterView<?> arg0) {
-//
-//                                        }
-//                                    }
-//                                );
-//                            }
-//
-//                        });
-//
-//                    } catch (Exception e) {
-//                        Log.e(TAG, e.getMessage());
-//                    }
-//                }
-//            });
-//        }catch (Exception e){
-//            Log.e(TAG, e.getMessage());
-//        }
-//    }
+        ftpLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this::handleFtpActivityResult);
 
-    private void getJsonConducenteAsync(String url) {
         try {
-            final AutoCompleteTextView atv = findViewById(R.id.atvConducente);
-            atv.setEnabled(false);
-
-            lpb.show();
-            OkHttpClient client = new OkHttpClient();
-            Request request = new Request.Builder()
-                    .url(url)
-                    .build();
-            Response responses = null;
-
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
-                }
-
-                @Override
-                public void onResponse(Call call, final Response response) throws IOException {
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            lpb.hide();
-                        }
-                    });
-                    if (!response.isSuccessful()) {
-                        throw new IOException("Unexpected code " + response);
-                    }
-                    try{
-                        final String jsonData = response.body().string();
-                        Gson gson = new Gson();
-                        final Result result   =  gson.fromJson(jsonData, Result.class);
-
-                        Type listType = new  TypeToken<List<Conducente>> (){}.getType();
-                        final List<Conducente>  conducenteList = gson.fromJson(result.getData().toString(),listType);
-
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                ConducenteAdapter<Conducente> conducenteAdapter = new ConducenteAdapter<Conducente>(getApplicationContext(), android.R.layout.simple_spinner_item, conducenteList);
-
-                                atv.setAdapter(conducenteAdapter);
-                                atv.setEnabled(true);
-
-//                                spinner.setAdapter(conducenteAdapter);
-//                                spinner.setEnabled(true);
-
-                                if(terminale != null && terminale.getIdConducente()!= null  && !terminale.getIdConducente().isEmpty() && !terminale.getIdConducente().equals("-1")) {
-                                    conducenteSelected = conducenteAdapter.getConducente(terminale.getIdConducente());
-                                    if (conducenteSelected!=null) {
-                                        atv.setText(conducenteSelected.Testo);
-                                        atv.setEnabled(false);
-                                    }
-//                                    spinner.setSelection(conducenteAdapter.getConducenteById(terminale.getIdConducente()));
-//                                    spinner.setEnabled(false);
-                                }
-
-                                atv.setOnItemClickListener((parent, view, position, id) -> {
-                                    conducenteSelected = null;
-                                    if (position != ListView.INVALID_POSITION) {
-                                        conducenteSelected =(Conducente)parent.getItemAtPosition(position);
-                                        atv.setSelection(0);
-                                        Toast.makeText(getApplicationContext(), "Hai selezionato" + conducenteSelected.getTesto(), Toast.LENGTH_LONG).show();
-                                        // TODO Auto-generated method stub
-                                        txAutista = findViewById(R.id.txAutista);
-                                        txAutista.setText(conducenteSelected.getTesto());
-
-                                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                                        imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
-                                    }
-                                });
-
-
-//                                spinner.setOnItemSelectedListener(
-//                                        new AdapterView.OnItemSelectedListener() {
-//
-//                                            @Override
-//                                            public void onItemSelected(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-//
-//                                                int position = spinner.getSelectedItemPosition();
-//                                                if (position > 0) {
-//                                                    Toast.makeText(getApplicationContext(), "You have selected " + conducenteList.get(position), Toast.LENGTH_LONG).show();
-//                                                    // TODO Auto-generated method stub
-//                                                    txAutista = findViewById(R.id.txAutista);
-//                                                    txAutista.setText(conducenteList.get(position).Testo);
-//                                                }
-//                                            }
-//
-//                                            @Override
-//                                            public void onNothingSelected(AdapterView<?> arg0) {
-//                                                // TODO Auto-generated method stub
-//
-//                                            }
-//                                        }
-//                                );
-                            }
-
-                        });
-
-                    } catch (Exception e) {
-                        Logger.e(TAG, "one error on getJsonConducenteAsync occurred: " + e.getMessage());
-                    }
-                }
-            });
-        }catch (Exception e){
-//            Log.e(TAG, e.getMessage());
-            Logger.e(TAG, "one error on getJsonConducenteAsync occurred: " + e.getMessage());
+            packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
+    private void handleFtpActivityResult(ActivityResult result) {
+        if (result.getResultCode() == RESULT_OK) {
+            Intent data = result.getData();
+            if (data == null) return;
+            final String fullPath = data.getExtras().get("fullPath").toString();
+            Uri destination = uriFromFile(getBaseContext(), new File(fullPath));
+
+            Intent promptInstall = new Intent(Intent.ACTION_VIEW);
+            promptInstall.setDataAndType(destination,"application/vnd.android.package-archive");
+            promptInstall.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            this.getBaseContext().startActivity(promptInstall);
+        }
+    }
+
+    private void getJsonConducenteAsync() {
+        final AutoCompleteTextView atv = findViewById(R.id.atvConducente);
+        atv.setEnabled(true);
+
+        lpb.show();
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url("http://85.39.149.205/ErgonService/ServiceErgon.svc/GetDdConducente")
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                e.printStackTrace();
+                mHandler.post(() -> {
+                    lpb.hide();
+                    showErrorDialog("GetDdConducente errore " + e.getMessage());
+                });
+                Log.e(TAG, "Error on getJsonConducenteAsync 1: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull final Response response) throws IOException {
+                mHandler.post(() -> lpb.hide());
+                if (!response.isSuccessful()) {
+                    mHandler.post(() -> showErrorDialog("Unexpected code " + response));
+                    throw new IOException("Unexpected code " + response);
+                }
+                try {
+                    final String jsonData = response.body().string();
+                    // Creare l'istanza di GsonBuilder e registrare il deserializzatore
+                    GsonBuilder gsonBuilder = new GsonBuilder();
+                    gsonBuilder.registerTypeAdapter(Result.class, new ResultDeserializer());
+                    Gson gsonResult = gsonBuilder.create();
+                    Result result = gsonResult.fromJson(jsonData, Result.class);
+                    Type listType = TypeToken.getParameterized(List.class, Conducente.class).getType();
+                    //mHandler.post(() -> showErrorDialog("TypeToken istanziato: " ));
+
+                    gsonBuilder = new GsonBuilder();
+                    gsonBuilder.registerTypeAdapter(listType, new ConducenteListDeserializer());
+                    gsonBuilder.registerTypeAdapter(Conducente.class, new ConducenteDeserializer());
+                    gsonResult = gsonBuilder.create();
+
+                    final List<Conducente> conducenteList = gsonResult.fromJson(result.getData().toString(), listType);
+
+                    mHandler.post(() -> {
+                        ConducenteAdapter conducenteAdapter = new ConducenteAdapter(getApplicationContext(), android.R.layout.simple_dropdown_item_1line, conducenteList);
+
+                        atv.setAdapter(conducenteAdapter);
+
+                        if (terminale != null && terminale.getIdConducente() != null && !terminale.getIdConducente().isEmpty() && !terminale.getIdConducente().equals("-1")) {
+                            conducenteSelected = conducenteAdapter.getConducente(terminale.getIdConducente());
+                            if (conducenteSelected != null) {
+                                atv.setText(conducenteSelected.getTesto());
+                                atv.setEnabled(false);
+                            }
+                        }
+
+                        atv.setOnItemClickListener((parent, view, position, id) -> {
+                            conducenteSelected = null;
+                            if (position != ListView.INVALID_POSITION) {
+                                conducenteSelected = (Conducente) parent.getItemAtPosition(position);
+                                atv.setSelection(0);
+                                Toast.makeText(getApplicationContext(), "Hai selezionato " + conducenteSelected.getTesto(), Toast.LENGTH_LONG).show();
+                                txAutista = findViewById(R.id.txAutista);
+                                txAutista.setText(conducenteSelected.getTesto());
+
+                                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                imm.hideSoftInputFromWindow(view.getApplicationWindowToken(), 0);
+                            }
+                        });
+                    });
+                } catch (Exception e) {
+                    mHandler.post(() -> showErrorDialog("Error on getJsonConducenteAsync 2: " + e.getMessage()));
+                    Log.e(TAG, "Error on getJsonConducenteAsync: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void showErrorDialog(String errorMessage) {
+        AlertDialog.Builder alt_bld = new AlertDialog.Builder(SettingActivity.this);
+        alt_bld.setMessage(errorMessage)
+                .setCancelable(false)
+                .setPositiveButton("OK", (dialog1, id1) -> dialog1.cancel());
+        AlertDialog alert = alt_bld.create();
+        alert.setTitle("Title");
+        alert.show();
+    }
     private void enableFields(boolean value) {
         txTesto.setEnabled(value);
         txTesto.setFocusable(value);
@@ -414,65 +303,46 @@ public class SettingActivity extends AppCompatActivity {
                 try {
                 builder.setMessage("Versione: " + getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
                 } catch (PackageManager.NameNotFoundException e) {
-                    Logger.e(TAG, "one error on OptionsItemSelected occurred: " + e.getMessage());
+                    Log.e(TAG, "one error on OptionsItemSelected occurred: " + e.getMessage());
                 }
 
                 String positiveText = "chiudi";
                 builder.setPositiveButton(positiveText,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                onBackPressed();
-                            }
-                        });
+                        (dialog, which) -> onBackPressed());
                 builder.show();
                 return true;
             case R.id.actio_ripristina:
                 builder.setTitle("Password");
                 final EditText psw= new EditText(this);
                 psw.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                psw.setGravity(Gravity.LEFT|Gravity.TOP);
+                psw.setGravity(Gravity.START|Gravity.TOP);
 
                 builder.setView(psw);
-                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (psw.getText().toString().equals("1977") ){
-                            DbManager dbManager;
-                            dbManager = new DbManager(getApplicationContext());
-                            dbManager.ResetDataBase(terminale);
-                            finish();
-                            startActivity(new Intent(getBaseContext(), MainActivity.class));
-                        }else
-                        {
-                            AlertDialog.Builder alt_bld = new AlertDialog.Builder(SettingActivity.this);
-                            alt_bld.setMessage("Password non valida")
-                                    .setCancelable(false)
-                                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int id) {
-                                            dialog.cancel();
-                                        }
-                                    });
-                            AlertDialog alert = alt_bld.create();
-                            // Title for AlertDialog
-                            alert.setTitle("Title");
-                            alert.show();
-                        }
+                builder.setPositiveButton("OK", (dialog, which) -> {
+                    if (psw.getText().toString().equals("1977") ){
+                        DbManager dbManager;
+                        dbManager = new DbManager(getApplicationContext());
+                        dbManager.ResetDataBase(terminale);
+                        finish();
+                        startActivity(new Intent(getBaseContext(), MainActivity.class));
+                    }else
+                    {
+                        AlertDialog.Builder alt_bld = new AlertDialog.Builder(SettingActivity.this);
+                        alt_bld.setMessage("Password non valida")
+                                .setCancelable(false)
+                                .setPositiveButton("OK", (dialog1, id1) -> dialog1.cancel());
+                        AlertDialog alert = alt_bld.create();
+                        alert.setTitle("Title");
+                        alert.show();
                     }
                 });
-                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
+                builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
                 AlertDialog alert = builder.create();
                 alert.show();
                 return true;
             case R.id.action_save:
                 if (!txFtpServer.getText().toString().trim().isEmpty()  &&
                     !txFtpServer.getText().toString().trim().toUpperCase().contains("HTTP://")) {
-                    //errore in mappa
                     txFtpServer.setError(getString(R.string.wrong_address));
                     txFtpServer.setText("");
                     return false;
@@ -480,7 +350,6 @@ public class SettingActivity extends AppCompatActivity {
 
                 if (!txWebServer.getText().toString().trim().isEmpty() &&
                     !txWebServer.getText().toString().trim().toUpperCase().contains("HTTP://")) {
-                    //errore in mappa
                     txWebServer.setError(getString(R.string.wrong_address));
                     txWebServer.setText("");
                     return false;
@@ -501,7 +370,6 @@ public class SettingActivity extends AppCompatActivity {
 
                 terminale = new Terminale(this);
                 terminale.setId(Integer.parseInt(txTerminale.getText().toString().trim()));
-//                terminale.setIdAutomezzo(((Automezzo) ddAutomezzo.getSelectedItem()).Id);
 
                 boolean result = false;
                 try {
@@ -516,8 +384,6 @@ public class SettingActivity extends AppCompatActivity {
                             terminale.setWebServer(txWebServer.getText().toString().trim());
                             terminale.setTarga(txTarga.getText().toString().trim());
                             terminale.setConducente(txAutista.getText().toString().trim());
-//                            if (ddConducente.getSelectedItem()!= null)
-//                                terminale.setIdConducente(((Conducente)ddConducente.getSelectedItem()).Id);
 
                             if (conducenteSelected != null){
                                 terminale.setIdConducente(conducenteSelected.getId());
@@ -539,7 +405,7 @@ public class SettingActivity extends AppCompatActivity {
 
                     enableFields(true);
                 }catch (Exception e){
-                    Logger.e(TAG, "one error on save occurred: " + e.getMessage());
+                    Log.e(TAG, "one error on save occurred: " + e.getMessage());
                     Toast.makeText(this, "One Error on save occurred: " +e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
 

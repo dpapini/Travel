@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/relativeLayout"
@@ -76,19 +77,6 @@
             android:src="@drawable/ic_update" />
 
     </RelativeLayout>
-    <!--<EditText-->
-        <!--android:id="@+id/txFtpServer"-->
-        <!--android:layout_width="368dp"-->
-        <!--android:layout_height="0dp"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="16dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:ems="10"-->
-        <!--android:hint="@string/ftp_server"-->
-        <!--android:inputType="textUri"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintStart_toStartOf="parent"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/txTesto" />-->
 
     <EditText
         android:id="@+id/txWebServer"
@@ -138,19 +126,6 @@
         app:layout_constraintTop_toBottomOf="@+id/txTarga"
         android:autofillHints="" />
 
-    <!--<Spinner-->
-        <!--android:id="@+id/ddAutomezzo"-->
-        <!--android:layout_width="375dp"-->
-        <!--android:layout_height="42dp"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="24dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:dropDownWidth="match_parent"-->
-        <!--android:ems="10"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintStart_toStartOf="parent"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/txWebServer" />-->
-
     <AutoCompleteTextView
         android:id="@+id/atvConducente"
         android:layout_width="0dp"
@@ -158,6 +133,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:height="48dp"
+        android:clickable="true"
         android:hint="@string/autista"
         android:maxLines="3"
         app:layout_constraintEnd_toEndOf="parent"

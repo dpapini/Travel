@@ -1,14 +1,12 @@
 package com.saporiditoscana.travel.DbHelper;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.content.Context;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.provider.SyncStateContract;
 import android.util.Log;
-
-import com.saporiditoscana.travel.Logger;
 import com.saporiditoscana.travel.MainActivity;
 import com.saporiditoscana.travel.Orm.Step;
 import com.saporiditoscana.travel.Orm.Terminale;
@@ -144,11 +142,9 @@ public class DBhelper extends SQLiteOpenHelper {
             if (!transectionStarted) db.setTransactionSuccessful();
         }catch (SQLiteException sqle)
         {
-            Logger.e(TAG, "one error occurred: " + sqle.getLocalizedMessage());
+            Log.e(TAG, "one error occurred: " + sqle.getLocalizedMessage());
         }
         finally {
-            if (!transectionStarted) db.endTransaction();
-
             initializeTable(db);
         }
     }
@@ -176,58 +172,54 @@ public class DBhelper extends SQLiteOpenHelper {
 
     }
 
-    public boolean tableExists(SQLiteDatabase db,  String nomeTabella) {
+    public boolean tableExists(SQLiteDatabase db, String nomeTabella) {
         Cursor cursor = null;
         boolean exists = false;
         try {
-            cursor = db.rawQuery(" SELECT * FROM sqlite_master   WHERE type = 'table'     AND name = '" + nomeTabella + "' ", null);
-            cursor.moveToFirst();
-            if (!cursor.isAfterLast()) {
-                exists = true;
-            }
+            cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{nomeTabella});
+            exists = cursor.moveToFirst();
+        } catch (SQLiteException sqle) {
+            throw sqle;
+        } finally {
             if (cursor != null) {
                 cursor.close();
             }
-            if (cursor != null) {
-                cursor.close();
-            }
-        }catch (SQLiteException sqle){
-            if (cursor != null) cursor.close();
-
-            throw  sqle;
         }
         return exists;
     }
 
-    public boolean fieldExists(SQLiteDatabase db,  String nomeTabella, String nomeCampo) {
 
+    @SuppressLint("Range")
+    public boolean fieldExists(SQLiteDatabase db, String nomeTabella, String nomeCampo) {
         Cursor cursor = null;
         boolean exists = false;
         try {
-//            cursor = db.rawQuery(" SELECT sql FROM sqlite_master   WHERE type = 'table'     AND name = '" + nomeTabella + "' ", null);
-            cursor = db.rawQuery("PRAGMA table_info("+nomeTabella+")",null);
-            if (cursor!= null) {
-                try{
-                    while (cursor.moveToNext() && !exists) {
-                        exists =  cursor.getString(cursor.getColumnIndex("name")).equals(nomeCampo);
+            cursor = db.rawQuery("PRAGMA table_info(" + nomeTabella + ")", null);
+            if (cursor != null) {
+                int columnNameIndex = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    String columnName = cursor.getString(columnNameIndex);
+                    if (columnName.equals(nomeCampo)) {
+                        exists = true;
+                        break;
                     }
                 }
-                finally {
-                    cursor.close();
-                }
             }
-
-        } catch (SQLiteException sqle){
-            if (cursor != null) cursor.close();
-
-            throw  sqle;
+        } catch (SQLiteException sqle) {
+            throw sqle;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
         return exists;
     }
 
+
     public void ResetDataBase(Terminale terminale){
-        SQLiteDatabase db = getWritableDatabase();
+        SQLiteDatabase db = null;
         try {//http://85.39.149.205
+            db = getWritableDatabase();
 
             db.beginTransaction();
             db.execSQL("DROP TABLE IF EXISTS " + T_TERMINALE);
@@ -239,13 +231,17 @@ public class DBhelper extends SQLiteOpenHelper {
             onCreate(db);
 
             if (terminale.getId() >0)
-                db.execSQL("INSERT INTO " + T_TERMINALE + "( id , web_server, ftp_server ) VALUES (\'" + String.valueOf(terminale.getId()) + "\' , \'" + terminale.getWebServer() + "\' , \'" +  terminale.getFtpServer() + "\')");
+                db.execSQL("INSERT INTO " + T_TERMINALE + "( id , web_server, ftp_server ) VALUES (\'" + terminale.getId() + "\' , \'" + terminale.getWebServer() + "\' , \'" +  terminale.getFtpServer() + "\')");
 
             db.setTransactionSuccessful();
         } catch (SQLiteException sqle) {
 //            Log.e(TAG, sqle.getMessage());
         } finally {
-            db.endTransaction();
+
+            if (db != null) {
+                db.endTransaction();
+                db.close();
+            }
         }
     }
 

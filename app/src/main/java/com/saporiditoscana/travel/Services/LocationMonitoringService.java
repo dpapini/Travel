@@ -6,51 +6,30 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.Log;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
-import com.saporiditoscana.travel.Logger;
-import com.saporiditoscana.travel.Orm.Gps;
-import java.util.List;
-
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 
-public class LocationMonitoringService extends Service implements
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+import android.util.Log;
+import com.saporiditoscana.travel.Orm.Gps;
+
+import java.util.List;
+
+public class LocationMonitoringService extends Service implements LocationListener {
 
     private static final String TAG = LocationMonitoringService.class.getSimpleName();
-    GoogleApiClient mLocationClient;
-
-    private static final LocationRequest mLocationRequest = LocationRequest.create()
-            .setInterval(1000)         // 10 minuti
-            .setFastestInterval(500)  //  5 minuti
-            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    private LocationManager locationManager;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        if (mLocationClient == null) {
-            mLocationClient = new GoogleApiClient.Builder(this)
-                    .addApi(LocationServices.API)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .build();
-
-            mLocationClient.connect();
-        }
-
-        //Make it stick to the notification panel so it is less prone to get cancelled by the Operating System.
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        startLocationUpdates();
         return START_STICKY;
     }
 
@@ -61,23 +40,24 @@ public class LocationMonitoringService extends Service implements
     }
 
     @Override
-    public void onConnected(@androidx.annotation.Nullable Bundle bundle) {
+    public void onDestroy() {
+        super.onDestroy();
+        stopLocationUpdates();
+    }
+
+    private void startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mLocationClient, mLocationRequest, this);
-        Logger.d(TAG, "Connected to Google API");
+
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        Log.d(TAG, "Location updates started");
     }
 
-    @Override
-    public void onConnectionSuspended(int i) {
-        Logger.d(TAG, "Connection suspended");
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Logger.d(TAG, "Failed to connect to Google API");
+    private void stopLocationUpdates() {
+        locationManager.removeUpdates(this);
+        Log.d(TAG, "Location updates stopped");
     }
 
     @Override
@@ -87,40 +67,44 @@ public class LocationMonitoringService extends Service implements
         }
     }
 
-    public Location getLastBestLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return null;
-        }
-        Location location = LocationServices.FusedLocationApi.getLastLocation(mLocationClient);
-        return location;
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
     }
 
     private void saveGpsCoordinate(String lat, String lng, long time) {
-        Gps gps =new Gps();
+        Gps gps = new Gps();
         gps.setLatitudine(String.valueOf(lat));
         gps.setLongitudine(String.valueOf(lng));
         gps.setTsValidita(time);
         Gps.Insert(gps, getBaseContext());
 
-        //call webservice
-        if (hasConnection()){
-
+        // Call webservice
+        if (hasConnection()) {
             List<Gps> gpsList = Gps.GetLista(this);
-            for (Gps item:gpsList) {
-                Gps.InsertGps (item, this); //aggiorno il db in azienda
+            for (Gps item : gpsList) {
+                Gps.InsertGps(item, this); // Aggiorno il database in azienda
             }
         }
-
     }
 
-    private boolean hasConnection(){
-        ConnectivityManager connectivityManager  = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+    private boolean hasConnection() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        if (activeNetworkInfo == null || !activeNetworkInfo.isConnected())
-            return false;
-        else return true;
+        if (connectivityManager != null) {
+            NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
+            return networkCapabilities != null && (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+        }
+
+        return false;
     }
-
 }

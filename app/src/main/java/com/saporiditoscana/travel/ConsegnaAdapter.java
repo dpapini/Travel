@@ -1,27 +1,24 @@
 package com.saporiditoscana.travel;
 
 import android.graphics.Color;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.saporiditoscana.travel.Orm.Consegna;
-
-import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.saporiditoscana.travel.Orm.Consegna;
+
+import java.util.List;
 
 public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.ConsegnaViewHolder> {
     public interface OnItemClickListener{
         void onItemClick(Consegna item);
     }
 
-    private static final String TAG = "ConsegnaAdapter";
     List<Consegna> consegnas;
     OnItemClickListener listener;
 
@@ -113,7 +110,7 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
 
     public int findItem(String key){
         int annoReg = 2000;
-        int nrReg = -1;
+        int nrReg;
         annoReg += Integer.parseInt(key.substring(0, 2));
         nrReg = Integer.parseInt(key.substring(2));
 
@@ -128,8 +125,7 @@ public class ConsegnaAdapter extends RecyclerView.Adapter<ConsegnaAdapter.Conseg
     @Override
     public ConsegnaViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.cardviewconsegna, viewGroup, false);
-        ConsegnaViewHolder cvh = new ConsegnaViewHolder(v);
-        return cvh;
+        return new ConsegnaViewHolder(v);
     }
 
     @Override

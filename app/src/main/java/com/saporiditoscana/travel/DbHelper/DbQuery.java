@@ -1,7 +1,5 @@
 package com.saporiditoscana.travel.DbHelper;
 
-import java.util.Objects;
-
 public class DbQuery {
     private String sql;
     private Object[] parameters;

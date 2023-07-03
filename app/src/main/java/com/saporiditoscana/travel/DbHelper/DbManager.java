@@ -1,35 +1,34 @@
 package com.saporiditoscana.travel.DbHelper;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
-import android.util.Log;
 
 import com.saporiditoscana.travel.Orm.Terminale;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class DbManager {
-    private DBhelper dBhelper;
-    private static final String TAG = "DbManager";
+    private final DBhelper dBhelper;
 
     public  DbManager(Context ctx){
         dBhelper = new DBhelper(ctx);
     }
 
     public Cursor GetCursor(String sql, String[] parameters){
-        SQLiteDatabase db = dBhelper.getReadableDatabase();
+        SQLiteDatabase db = null;
 
         try {
+            db = dBhelper.getReadableDatabase();
             return db.rawQuery(sql, parameters);
         }catch (SQLiteException sqle){
 //            Log.e(TAG, sqle.getMessage());
             return null;
         }
+
     }
 
     public boolean checkDataBase() {
@@ -42,26 +41,32 @@ public class DbManager {
 
     public void ExecuteSql(String sql){
 
-        SQLiteDatabase db = dBhelper.getWritableDatabase();
+        SQLiteDatabase db = null;
 
-        db.beginTransaction(); //start transaction
         try {
+            db=dBhelper.getWritableDatabase();
+            db.beginTransaction(); //start transaction
+
             db.execSQL(sql);
             db.setTransactionSuccessful(); //sett transaction to successfull
         }catch (SQLiteException sqle){
             throw  sqle;
         }
         finally {
-            db.endTransaction(); //set end transaction
+            if (db!=null) {
+                db.endTransaction(); //set end transaction
+                db.close();
+            }
         }
     }
 
     public void ExecuteSql(List<DbQuery> lsDbQuery){
 
-        SQLiteDatabase db = dBhelper.getWritableDatabase();
-
-        db.beginTransaction(); //start transaction
+        SQLiteDatabase db = null;
         try {
+            db= dBhelper.getWritableDatabase();
+            db.beginTransaction(); //start transaction
+
             String sql;
             Object[] parameters;
             for (DbQuery dbQuery:lsDbQuery) {
@@ -77,19 +82,25 @@ public class DbManager {
             throw  sqle;
         }
         finally {
-            db.endTransaction(); //set end transaction
+            if(db!=null) {
+                db.endTransaction(); //set end transaction
+                db.close();
+            }
         }
     }
 
+    @SuppressLint("Range")
     public int ExecuteSql(String sql, Object[] parameters){
         int result = 0;
-        SQLiteDatabase db = dBhelper.getWritableDatabase();
-
-        db.beginTransaction(); //start transaction
+        Cursor res=null;
+        SQLiteDatabase db = null;
         try {
+            db=dBhelper.getWritableDatabase();
+            db.beginTransaction(); //start transaction
+
             db.execSQL(sql,parameters);
 
-            Cursor res = db.rawQuery("SELECT changes() 'affected_rows'", null);
+            res = db.rawQuery("SELECT changes() 'affected_rows'", null);
             res.moveToFirst();
             result = res.getInt(res.getColumnIndex("affected_rows"));
 
@@ -98,17 +109,24 @@ public class DbManager {
             throw  sqle;
         }
         finally {
-            db.endTransaction(); //set end transaction
+            if(db!=null) {
+                db.endTransaction(); //set end transaction
+                db.close();
+            }
+            if (res!=null){
+                res.close();
+            }
         }
         return result;
     }
 
     public boolean Insert(String NomeTabella, ContentValues Values)
     {
-        SQLiteDatabase db = dBhelper.getWritableDatabase();
-
-        db.beginTransaction(); //start transaction
+        SQLiteDatabase db =null;
         try {
+            db=dBhelper.getWritableDatabase();
+            db.beginTransaction(); //start transaction
+
             db.insert(NomeTabella, null, Values);
             db.setTransactionSuccessful(); //sett transaction to successfull
             return true;
@@ -116,7 +134,10 @@ public class DbManager {
             return false;
         }
         finally {
-            db.endTransaction(); //set end transaction
+            if(db!=null) {
+                db.endTransaction(); //set end transaction
+                db.close();
+            }
         }
     }
 
